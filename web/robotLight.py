@@ -168,6 +168,16 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.colorBreathG = 0
         self.colorBreathB = 0
         self.breathSteps = 10
+
+        
+        self.rainbow_r = 0
+        self.rainbow_g = 0
+        self.rainbow_b = 00
+
+        self.colorFlowingR = 0
+        self.colorFlowingG = 0
+        self.colorFlowingB = 0
+
         self.set_all_led_color(0,0,0)
         super(Adeept_SPI_LedPixel, self).__init__(*args, **kwargs)
         self.__flag = threading.Event()
@@ -248,13 +258,13 @@ class Adeept_SPI_LedPixel(threading.Thread):
         for i in range(3):
             self.led_color[index*3+i] = p[i]
 
-    def setSomeColor_data(self, index, r, g, b):
+    def set_led_color_data(self, index, r, g, b):
         self.set_ledpixel(index, r, g, b)  
         
     def set_led_rgb_data(self, index, color):
         self.set_ledpixel(index, color[0], color[1], color[2])   
         
-    def setSomeColor(self, index, r, g, b):
+    def set_led_color(self, index, r, g, b):
         self.set_ledpixel(index, r, g, b)
         self.show() 
         
@@ -264,7 +274,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
     
     def set_all_led_color_data(self, r, g, b):
         for i in range(self.led_count):
-            self.setSomeColor_data(i, r, g, b)
+            self.set_led_color_data(i, r, g, b)
             
     def set_all_led_rgb_data(self, color):
         for i in range(self.led_count):
@@ -272,13 +282,14 @@ class Adeept_SPI_LedPixel(threading.Thread):
         
     def set_all_led_color(self, r, g, b):
         for i in range(self.led_count):
-            self.setSomeColor_data(i, r, g, b)
+            self.set_led_color_data(i, r, g, b)
         self.show()
         
     def set_all_led_rgb(self, color):
         for i in range(self.led_count):
             self.set_led_rgb_data(i, color) 
         self.show()
+    
     
     def write_ws2812_numpy8(self):
         d = numpy.array(self.led_color).ravel()        #Converts data into a one-dimensional array
@@ -362,6 +373,20 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.colorBreathG = G_input
         self.colorBreathB = B_input
         self.resume()    
+
+    def rainbow(self, R_input, G_input, B_input):
+        self.lightMode = 'rainbow'
+        self.rainbow_r = R_input
+        self.rainbow_g = G_input
+        self.rainbow_b = B_input
+        self.resume()
+
+    def flowing(self, R_input, G_input, B_input):
+        self.lightMode = 'flowing'
+        self.colorFlowingR = R_input
+        self.colorFlowingG = G_input
+        self.colorFlowingB = B_input
+        self.resume()
             
     def resume(self):
         self.__flag.set()
@@ -385,6 +410,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
                     break
                 self.set_all_led_color(self.colorBreathR-(self.colorBreathR*i/self.breathSteps), self.colorBreathG-(self.colorBreathG*i/self.breathSteps), self.colorBreathB-(self.colorBreathB*i/self.breathSteps))
                 time.sleep(0.03)
+
     def policeProcessing(self):
         while self.lightMode == 'police':
             for i in range(0,3):
@@ -405,6 +431,31 @@ class Adeept_SPI_LedPixel(threading.Thread):
                 self.show()
                 time.sleep(0.05)
             time.sleep(0.1)
+
+    def rainbowProcessing(self):
+        while self.lightMode == 'rainbow':
+            for i in range(self.led_count):
+                self.rainbow_r = self.rainbow_r + i * 10
+                self.rainbow_g = self.rainbow_g + i * 10
+                self.rainbow_b = self.rainbow_b + i * 10
+                if self.rainbow_r > 255:
+                    self.rainbow_r -= 255
+                if self.rainbow_g > 255:
+                    self.rainbow_g -= 255
+                if self.rainbow_b > 255:
+                    self.rainbow_b -= 255
+                self.set_led_color(i, self.rainbow_r + i * 10,self.rainbow_g,self.rainbow_b)
+                self.show()
+                self.lightMode = 'none'
+
+    def flowingProcessing(self):
+        while self.lightMode == 'flowing':
+            self.set_all_led_rgb_data([0, 0, 0])
+            for i in range(self.led_count):
+                self.set_led_color(i, self.colorFlowingR,self.rainbow_g,self.colorFlowingR)
+                time.sleep(0.2)
+                self.show()
+            time.sleep(0.2)    
             
             
     def lightChange(self):
@@ -414,6 +465,10 @@ class Adeept_SPI_LedPixel(threading.Thread):
             self.policeProcessing()
         elif self.lightMode == 'breath':
             self.breathProcessing()    
+        elif self.lightMode == 'rainbow':
+            self.rainbowProcessing()
+        elif self.lightMode == 'flowing':
+            self.flowingProcessing() 
     
     def run(self):
         while 1:

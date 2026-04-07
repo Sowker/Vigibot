@@ -16,7 +16,30 @@ import ultra
 import Kalman_filter
 import move
 import RPIservo
+import smbus
 from gpiozero import InputDevice
+last_status = 0
+
+
+lightADC = 127
+lightThreshold = 15
+
+
+line_pin_left = 22
+line_pin_middle = 27
+line_pin_right = 17
+
+class ADS7830(object):
+    def __init__(self):
+        self.cmd = 0x84
+        self.bus=smbus.SMBus(1)
+        self.address = 0x48 # 0x48 is the default i2c address for ADS7830 Module.   
+        
+    def analogRead(self, chn): # ADS7830 has 8 ADC input pins, chn:0,1,2,3,4,5,6,7
+        value = self.bus.read_byte_data(self.address, self.cmd|(((chn<<2 | chn>>1)&0x07)<<4))
+        return value
+
+adc = ADS7830()
 
 scGear = RPIservo.ServoCtrl()
 scGear.start()
@@ -89,9 +112,9 @@ class Functions(threading.Thread):
 
 	def setup(self):
 		global track_line_left, track_line_middle,track_line_right
-		track_line_left = InputDevice(pin=line_pin_right)
+		track_line_left = InputDevice(pin=line_pin_left)
 		track_line_middle = InputDevice(pin=line_pin_middle)
-		track_line_right = InputDevice(pin=line_pin_left)
+		track_line_right = InputDevice(pin=line_pin_right)
 
 	def radarScan(self):
 		pwm0_min = -90
@@ -108,7 +131,7 @@ class Functions(threading.Thread):
 			pwm0_pos-=scan_speed
 			scGear.moveAngle(1, pwm0_pos)
 			dist = ultra.checkdist()
-			if dist > 200:
+			if dist > 50:
 				continue
 			theta = 90 - pwm0_pos 
 			result.append([dist, theta])
@@ -142,114 +165,135 @@ class Functions(threading.Thread):
 		self.functionMode = 'keepDistance'
 		self.resume()
 
+	def trackLight(self):
+		self.functionMode = 'trackLight'
+		self.resume()
+
+
 
 	def trackLineProcessing(self):
+		global last_status
+     
 		status_right = track_line_right.value
 		status_middle = track_line_middle.value
 		status_left = track_line_left.value
+		current_status = (status_left << 2) | (status_middle << 1) | status_right
+
+		if last_status == current_status:
+			return
+
+		last_status = current_status
+
 		if status_middle == 0:
-			if status_left == 0 and status_right == 1:
-				scGear.moveAngle(0, 25)
-				scGear.moveAngle(2, 0)
-				time.sleep(0.1)
-				move.move(30,1,"mid")
-			elif status_left == 1 and status_right == 0:
-				scGear.moveAngle(0,-25)
-				scGear.moveAngle(2, 0)
-				time.sleep(0.1)
-				move.move(30,1,"mid")
-			else:
-				scGear.moveAngle(0, 0)
-				scGear.moveAngle(2, 0)
-				move.move(30,1,"mid")
-		elif status_left == 0:
-			scGear.moveAngle(0,25)
-			scGear.moveAngle(2,0)
-			time.sleep(0.1)
-			move.move(30,1,"mid")
-		elif status_right == 0:
-			scGear.moveAngle(0,-25)
-			scGear.moveAngle(2,0)
-			time.sleep(0.1)
-			move.move(30,1,"mid")
+			if status_left == 0 and status_right == 1:    # 0 0 1   right
+				scGear.moveAngle(0, -38)
+				move.move(28,1,"right")
+			elif status_left == 1 and status_right == 0:  # 1 0 0 left
+				scGear.moveAngle(0, 38)
+				move.move(28,1,"left")
+			else:									 # 0 0 0 or 1 0 1
+				scGear.moveAngle(0, 0)  
+				move.move(28,1,"mid")
 		else:
-			move.move(30,1,"no")
+			if status_left == 0 and status_right == 1:	#011
+				scGear.moveAngle(0, -38)
+				move.move(28,1,"right")
+			elif status_left == 1 and status_right == 0:	#110
+				scGear.moveAngle(0, 38)
+				move.move(28,1,"left")
+			else:	#010 or 111
+				scGear.moveAngle(0, 0)
+				move.move(28,1,"mid")
 		print(status_left,status_middle,status_right)
 		time.sleep(0.1)
 
-
-	
-# Filter out occasional incorrect distance data.
 	def distRedress(self): 
 		mark = 0
 		distValue = ultra.checkdist()
 		while True:
 			distValue = ultra.checkdist()
-			if distValue > 900:
+			if distValue > 200:
 				mark +=  1
-			elif mark > 5 or distValue < 900:
+			elif mark > 5 or distValue <200:
 					break
-			print(distValue)
 		return round(distValue,2)
 
 	def automaticProcessing(self):
 		print('automaticProcessing')
 		dist = self.distRedress()
 		print(dist, "cm")
-		if dist >= 65:			# More than 50CM, go straight.
+		if dist > 60:			# More than 50CM, go straight.
 			scGear.moveAngle(0, 0)
+			move.move(50, 1, "mid")
 			time.sleep(0.3)
-			move.move(35, 1, "mid")
 			print("Forward")
-		# More than 30cm and less than 50cm, detect the distance between the left and right sides.
-		elif dist > 45 and dist < 65:	
+		elif dist >= 40 and dist <= 60:	 # More than 40cm and less than 60cm, detect the distance between the left and right sides.
 			move.move(0, 1, "mid")
-			scGear.moveAngle(1, 45)
-			time.sleep(0.4)
+			scGear.moveAngle(1, 60)
+			time.sleep(0.5)
 			distLeft = self.distRedress()
 			self.scanList[0] = distLeft
 
-			# Go in the direction where the detection distance is greater.
-			scGear.moveAngle(1, -45)
-			time.sleep(0.4)
+			scGear.moveAngle(1, -60)
+			time.sleep(0.5)
 			distRight = self.distRedress()
 			self.scanList[1] = distRight
+
 			print(self.scanList)
 			scGear.moveAngle(1, 0)
 			if self.scanList[0] >= self.scanList[1]:
-				scGear.moveAngle(0, 30)
-				time.sleep(0.3)
+				scGear.moveAngle(0, 40)
 				move.move(50, 1, "left")
+				time.sleep(0.6)
 				print("Left")
 			else:
-				scGear.moveAngle(0, -30)
-				time.sleep(0.3)
+				scGear.moveAngle(0, -40)
 				move.move(50, 1, "right")
+				time.sleep(0.6)
 				print("Right")
-		else:		# The distance is less than 30cm, back.
+		else:		# The distance is less than 40cm, back.
 			scGear.moveAngle(0, 0)
+			move.move(50, -1, "mid")
 			time.sleep(0.3)
-			move.move(35, -1, "mid")
 			print("Back")
-		time.sleep(0.5)	
 		
-
-
-
 
 
 	def keepDisProcessing(self):
 		distanceGet = self.distRedress()
-
 		print('keepDistanceProcessing: ' + str(distanceGet))
 		if distanceGet > 40:
-			move.move(60, 1, "mid")
+			move.move(40, 1, "mid")
 		elif distanceGet < 30:
-			move.move(60, -1, "mid")
+			move.move(40, -1, "mid")
 		else:
 			move.motorStop()
 		time.sleep(0.3)
    
+	def trackLightProcessing(self):
+		global last_status
+
+		adc_value = adc.analogRead(1)  
+		if last_status == 0:
+			pass
+		elif adc_value < lightADC - lightThreshold and last_status < lightADC - lightThreshold:
+			return
+		elif adc_value > lightADC + lightThreshold and last_status > lightADC + lightThreshold:
+			return
+		elif adc_value > lightADC - lightThreshold and adc_value < lightADC + lightThreshold and last_status > lightADC - lightThreshold and last_status < lightADC + lightThreshold:
+			return
+		last_status = adc_value
+  
+		print(f"Light Tracking Value: {adc_value}")
+		if adc_value < lightADC - lightThreshold:
+			scGear.moveAngle(0, 40)
+			move.move(50, 1, "left")
+		elif adc_value > lightADC + lightThreshold:
+			scGear.moveAngle(0, -40)
+			move.move(50, 1, "right")
+		else:
+			move.move(30,1,"mid")
+		time.sleep(0.2)
 
 
 	def functionGoing(self):
@@ -261,6 +305,8 @@ class Functions(threading.Thread):
 			self.trackLineProcessing()
 		elif self.functionMode == 'keepDistance':
 			self.keepDisProcessing()
+		elif self.functionMode == 'trackLight':
+			self.trackLightProcessing()
 
 
 	def run(self):

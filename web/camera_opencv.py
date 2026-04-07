@@ -52,6 +52,7 @@ ImgIsNone = 0
 
 colorUpper = np.array([44, 255, 255])
 colorLower = np.array([24, 100, 100])
+APPMode = None
 
 def map(input, in_min,in_max,out_min,out_max):
     return (input-in_min)/(in_max-out_min)*(out_max-out_min)+out_min
@@ -353,9 +354,14 @@ class CVThread(threading.Thread):
                 CVThread.Y_lock = 1
         else:
             print('No servoPort %d assigned.'%ID)
+        time.sleep(0.1)
 
     def findColor(self, frame_image):
-        hsv = cv2.cvtColor(frame_image, cv2.COLOR_BGR2HSV)
+        global APPMode
+        if APPMode == 'APP':
+            hsv = cv2.cvtColor(frame_image, cv2.COLOR_BGR2RGB)
+        else:
+            hsv = cv2.cvtColor(frame_image, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, colorLower, colorUpper)#1
         mask = cv2.erode(mask, None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
@@ -439,6 +445,37 @@ class Camera(BaseCamera):
         print(colorUpper)
         print(colorLower)
 
+    def colorFindSetApp(self, invarH, invarS, invarV):
+        global colorUpper, colorLower
+        HUE_1 = invarH + 100
+        HUE_2 = invarH - 100
+        if HUE_1>255:
+            HUE_1=255
+        if HUE_2<0:
+            HUE_2=0
+
+        SAT_1 = invarS + 100
+        SAT_2 = invarS-100
+        if SAT_1>255:
+            SAT_1=255
+        if SAT_2<0:
+            SAT_2=0
+
+        VAL_1 = invarV+100
+        VAL_2 = invarV-100
+        if VAL_1>255:
+            VAL_1=255
+        if VAL_2<0:
+            VAL_2=0
+
+        colorUpper = np.array([HUE_1, SAT_1, VAL_1])
+        colorLower = np.array([HUE_2, SAT_2, VAL_2])
+        print('HSV_1:%d %d %d'%(HUE_1, SAT_1, VAL_1))
+        print('HSV_2:%d %d %d'%(HUE_2, SAT_2, VAL_2))
+        print(colorUpper)
+        print(colorLower)
+
+
     def modeSet(self, invar):
         Camera.modeSelect = invar
 
@@ -517,10 +554,7 @@ class Camera(BaseCamera):
                 if ImgIsNone == 0:
                     print("--------------------")
                     print("\033[31merror: Unable to read camera data.\033[0m")
-                    print("\033[33mIt may be that the Legacy camera is not turned on or the camera is not connected correctly.\033[0m")
-                    print("Open the Legacy camera: Enter in Raspberry Pi\033[34m'sudo raspi-config'\033[0m -->Select\033[34m'3 Interface Options'\033[0m -->\033[34m'I1 Legacy Camera'\033[0m.")
                     print("Use the command: \033[34m'sudo killall python3'\033[0m. Close the self-starting program webServer.py")
-                    print("Use the command: \033[34m'raspistill -t 1000 -o image.jpg'\033[0m to check whether the camera can be used correctly.")
                     print("Press the keyboard keys \033[34m'Ctrl + C'\033[0m multiple times to exit the current program.")
                     print("--------Ctrl+C quit-----------")
                     ImgIsNone = 1

@@ -93,9 +93,6 @@ def Motor(channel,direction,motor_speed):
     motor4.throttle = speed
 
 def move(speed, direction, turn, radius=0.6):   # 0 < radius <= 1  
-    #eg: move(100, 1, "no")--->forward
-    #    move(100, 1, "left")---> left forward
-    #speed:0~100. direction:1/-1. turn: "left", "right", "no".
     if speed == 0:
         motorStop() #all motor stop.
     else:
