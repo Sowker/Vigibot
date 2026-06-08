@@ -49,7 +49,7 @@ class DC_Motor():
         speed = self._map(motor_speed, 0, 100, 0, 1.0)
         if direction == -1:
             speed = -speed
-        motor1.throttle = speed
+        self.motor1.throttle = speed
 
     def _ramp(self, stop_time, direction, speed):
         '''
@@ -101,8 +101,8 @@ class DC_Motor():
 
 
 if __name__ == '__main__':
+    my_motor = DC_Motor()
     try:
-        my_motor = DC_Motor()
         for i in range(10):
             my_motor.control(1, 100)
 
@@ -111,7 +111,7 @@ if __name__ == '__main__':
             my_motor.control(-1, 100)
             print("Backward")
             time.sleep(3)
-        destroy()
+        my_motor.destroy()
     except KeyboardInterrupt:
-        destroy()
+        my_motor.destroy()
 
