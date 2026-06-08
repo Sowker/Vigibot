@@ -320,17 +320,17 @@ if __name__ == '__main__':
 
             while True:
                  for i in range(led.led_count):
-                    led.attributeRGB(i, "R", 63)
+                    led.attributeRGB(i, "R", 1)
                     time.sleep(1)
-                    led.attributeRGB(i, "G", 63)
+                    led.attributeRGB(i, "G", 1)
                     time.sleep(1)
-                    led.attributeRGB(i, "B", 63)
+                    led.attributeRGB(i, "B", 1)
                     time.sleep(1)
-                    led.attributeRGB(i, "N", 63)
+                    led.attributeRGB(i, "N", 1)
                     time.sleep(1)
 
                 #Then set all LEDs to white
-                 led.set_all_led_color(20, 20, 20)
+                 led.set_all_led_color(1, 1, 1)
                  led.show()
                  time.sleep(1)
 
