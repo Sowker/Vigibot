@@ -287,27 +287,31 @@ if __name__ == '__main__':
     print("spidev device as show:")
     os.system("ls /dev/spi*")
 
-    led = Adeept_SPI_LedPixel(12, 255)              # Use MOSI for /dev/spidev0 to drive the lights
+    # Create controller for 12 LEDs
+    led = Adeept_SPI_LedPixel(12, 255)  # Use MOSI for /dev/spidev0 to drive the lights
 
     try:
         if led.check_spi_state() != 0:
+            # Ensure controller knows we have 12 LEDs
+            led.set_led_count(12)
+            # Start with all off
+            led.set_all_led_color(0, 0, 0)
+            time.sleep(0.2)
 
-            while True:
-                for j in range(255):
-                    for i in range(led.led_count):
-                        led.set_led_color_data(i, 255, 0, 0)
-                    led.show()
-                    time.sleep(1)
-                led.set_all_led_color_data(255, 255, 255)
+            # Turn each LED red one after another (cumulative)
+            for i in range(led.led_count):
+                led.set_led_rgb_data(i, [255, 0, 0])
                 led.show()
+                time.sleep(0.15)
+
+            # Then set all LEDs to white
+            led.set_all_led_color(255, 255, 255)
+            led.show()
+            time.sleep(1)
         else:
             led.led_close()
     except KeyboardInterrupt:
+        pass
+    finally:
         led.led_close()
-        
-    
-
-
-
-
 
