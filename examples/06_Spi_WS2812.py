@@ -313,13 +313,29 @@ if __name__ == '__main__':
     os.system("ls /dev/spi*")
 
     # Create controller for 12 LEDs
-    led = Adeept_SPI_LedPixel(14, 255)  # Use MOSI for /dev/spidev0 to drive the lights
+    led = Adeept_SPI_LedPixel(14, 255)
+    led.start()# Use MOSI for /dev/spidev0 to drive the lights
 
     try:
-        led.clignotant("L")  # Start left clignotant
-        time.sleep(5)  # Let it run for 5 seconds
+        if led.check_spi_state() != 0:
+            led.set_led_count(12)
+            led.set_all_led_color(0, 0, 0)
+            time.sleep(0.2)
+
+            led.police()  # begin police animation (non-blocking)
+            print("Police mode running — CTRL+C to stop")
+            while True:
+                time.sleep(1)  # main thread stays alive (do other work here)
+        else:
+            print("SPI not initialized")
     except KeyboardInterrupt:
-        pass
+        print("Stopping...")
     finally:
+        # request stop and cleanup
+        led.lightMode = 'none'  # ask the worker to stop animations
+        try:
+            led._Adeept_SPI_LedPixel__flag.clear()  # pause the thread (private Event)
+        except Exception:
+            pass
         led.led_close()
 
