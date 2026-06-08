@@ -291,30 +291,7 @@ if __name__ == '__main__':
 
     try:
         if led.check_spi_state() != 0:
-            led.set_led_count(12)
-            led.set_all_led_color_data(255, 0, 0)
-            led.show()
-            time.sleep(0.5)
-            led.set_all_led_rgb_data([0, 255, 0])
-            led.show()
-            time.sleep(0.5)
-            led.set_all_led_color(0, 0, 255)
-            time.sleep(0.5)
-            led.set_all_led_rgb([0, 255, 255])
-            time.sleep(0.5)
 
-            led.set_led_count(12)
-            led.set_all_led_color_data(255, 255, 0)
-            for i in range(255):
-                led.set_led_brightness(i)
-                led.show()
-                time.sleep(0.005)
-            for i in range(255):
-                led.set_led_brightness(255-i)
-                led.show()
-                time.sleep(0.005)
-                  
-            led.set_led_brightness(20)
             while True:
                 for j in range(255):
                     for i in range(led.led_count):
