@@ -319,21 +319,20 @@ if __name__ == '__main__':
             time.sleep(0.2)
 
             while True:
-                # Turn each LED red one after another (cumulative)
                  for i in range(led.led_count):
-                    led.attributeRGB(i, "R", 255)
+                    led.attributeRGB(i, "R", 63)
                     time.sleep(1)
-                    led.attributeRGB(i, "G", 125)
+                    led.attributeRGB(i, "G", 63)
                     time.sleep(1)
-                    led.attributeRGB(i, "B", 255)
+                    led.attributeRGB(i, "B", 63)
                     time.sleep(1)
-                    led.attributeRGB(i, "N", 255)
+                    led.attributeRGB(i, "N", 63)
                     time.sleep(1)
 
-                    # Then set all LEDs to white
-                    led.set_all_led_color(255, 255, 255)
-                    led.show()
-                    time.sleep(1)
+                #Then set all LEDs to white
+                 led.set_all_led_color(20, 20, 20)
+                 led.show()
+                 time.sleep(1)
 
         else:
             led.led_close()
