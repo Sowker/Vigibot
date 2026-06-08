@@ -318,10 +318,10 @@ if __name__ == '__main__':
             while True:
                 for j in range(255):
                     for i in range(led.led_count):
-                        set_led_color_data(i, 255, 0, 0)
+                        led.set_led_color_data(i, 255, 0, 0)
                     led.show()
                     time.sleep(1)
-                set_all_led_color_data(255, 255, 255)
+                led.set_all_led_color_data(255, 255, 255)
                 led.show()
         else:
             led.led_close()
