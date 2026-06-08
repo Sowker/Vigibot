@@ -31,7 +31,7 @@ class DC_Motor():
         self.motor1.throttle = 0
         self.stopped = 1
 
-    def _map(x, in_min, in_max, out_min, out_max):
+    def _map(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
     def destroy(self):
@@ -46,7 +46,7 @@ class DC_Motor():
             motor_speed = 100
         elif motor_speed < 0:
             motor_speed = 0
-        speed = map(motor_speed, 0, 100, 0, 1.0)
+        speed = self._map(motor_speed, 0, 100, 0, 1.0)
         if direction == -1:
             speed = -speed
         motor1.throttle = speed
