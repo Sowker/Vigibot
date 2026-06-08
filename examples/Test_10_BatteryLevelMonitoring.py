@@ -1,6 +1,3 @@
-#!/usr/bin/env/python
-# File name   : BatteryLevelMonitoring_fixed.py
-# Based on    : 10_BatteryLevelMonitoring.py (Adeept)
 import time
 import board
 import busio
@@ -17,10 +14,6 @@ R15 = 3000
 R17 = 1000
 DivisionRatio = R17 / (R15 + R17)
 
-# Plage de tension physiquement plausible pour ce pack de batterie.
-# En dehors de cette plage, la lecture ne reflete pas un vrai niveau
-# de charge mais plutot un probleme de mesure (pas de batterie branchee,
-# mauvais contact, capteur mal cable, etc.)
 PlausibleMin = WarningThreshold - 1.0
 PlausibleMax = Vref + 0.5
 
