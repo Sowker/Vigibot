@@ -104,7 +104,6 @@ def cancel_blink():
 def set_blink(mode):
     global blink_state
     with blink_lock:
-        # Retaper la meme commande desactive le clignotant en cours
         blink_state = None if blink_state == mode else mode
         new_state = blink_state
 
