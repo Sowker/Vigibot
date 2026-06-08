@@ -24,12 +24,14 @@ class DC_Motor():
         self.motor1 = motor.DCMotor(self.pwm_motor.channels[MOTOR_M1_IN1], self.pwm_motor.channels[MOTOR_M1_IN2])
         self.motor1.decay_mode = (motor.SLOW_DECAY)
 
-        self.stopped = 1
+        self.actual_speed = 0
+        self.actual_direction = 0
+
         self.motorStop()
 
     def motorStop(self):  # Motor stops
+        self._ramp(0.2, 0)
         self.motor1.throttle = 0
-        self.stopped = 1
 
     def _map(self, x, in_min, in_max, out_min, out_max):
         return (x - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
@@ -51,17 +53,24 @@ class DC_Motor():
             speed = -speed
         self.motor1.throttle = speed
 
-    def _ramp(self, stop_time, direction, speed):
+    def _ramp(self, stop_time, speed):
         '''
-        Slowly accelerate
+        Slowly accelerate or stop
         '''
         if stop_time > 1:
             stop_time = 1
-        step = speed / (stop_time*10)
-        actual_speed = 0
+
+        if speed == 0:
+            step = actual_speed / (stop_time * 10)
+        else:
+            step = speed / (stop_time*10)
+
         for i in range(0, stop_time*10):
-            actual_speed += step
-            self._power(direction, actual_speed)
+            if speed == 0:
+                self.actual_speed -= step
+            else:
+                self.actual_speed += step
+            self._power(self.actual_direction, self.actual_speed)
             time.sleep(0.1)
 
     def control(self, direction, motor_speed, duration=1, ramp=1, slow=0):
@@ -71,15 +80,18 @@ class DC_Motor():
         if self.stopped:
             self.stopped = 0
         # if slow mode, no ramp and 1/4 power (25)
+        if direction != self.actual_direction:
+            self.motorStop()
+        self.actual_direction = direction
         if slow == 1:
-            _power(direction, 25)
+            _power(self.actual_direction, 25)
         # else ramp
         else:
             if duration < 1:
-                self._ramp(duration, direction, motor_speed)
+                self._ramp(duration, motor_speed)
                 self.motorStop()
             else:
-                self._ramp(1, direction, motor_speed)
+                self._ramp(1, motor_speed)
 
     # def run(self, ramp=1, slow=0):
     #     '''
