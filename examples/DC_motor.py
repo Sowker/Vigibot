@@ -27,18 +27,18 @@ class DC_Motor():
         self.stopped = 1
         self.motorStop()
 
-    def motorStop():  # Motor stops
+    def motorStop(self):  # Motor stops
         self.motor1.throttle = 0
         self.stopped = 1
 
     def _map(x, in_min, in_max, out_min, out_max):
         return (x - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
-    def destroy():
+    def destroy(self):
         self.motorStop()
         pwm_motor.deinit()
 
-    def _power(direction, motor_speed):
+    def _power(self, direction, motor_speed):
         '''
         Power the motor
         '''
