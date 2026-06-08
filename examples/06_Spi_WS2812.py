@@ -316,21 +316,8 @@ if __name__ == '__main__':
     led = Adeept_SPI_LedPixel(14, 255)  # Use MOSI for /dev/spidev0 to drive the lights
 
     try:
-        if led.check_spi_state() != 0:
-            # Ensure controller knows we have 12 LEDs
-            led.set_led_count(14)
-            # Start with all off
-            led.set_all_led_color(0, 0, 0)
-            time.sleep(0.2)
-
-            while True:
-                index = int(input("Quelle LED (1 à 14)"))
-                color = input("Quelle couleurs? (R,G,B ou N)")
-                intens = int(input("Quelle intensité? (0 à 255)"))
-                led.attributeRGB(index, color, intens)
-                time.sleep(0.2)
-        else:
-            led.led_close()
+        led.clignotant("L")  # Start left clignotant
+        time.sleep(5)  # Let it run for 5 seconds
     except KeyboardInterrupt:
         pass
     finally:
