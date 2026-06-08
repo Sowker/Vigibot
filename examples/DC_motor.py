@@ -4,7 +4,7 @@ from board import SCL, SDA
 import busio
 from adafruit_pca9685 import PCA9685
 from adafruit_motor import motor
-import keyboard
+import curses
 
 # motor_EN_A: Pin7  |  motor_EN_B: Pin11
 # motor_A:  Pin8,Pin10    |  motor_B: Pin13,Pin12
@@ -85,11 +85,17 @@ class DC_Motor():
     #     '''
     #     Run by reacting to the keyboard
     #     '''
-    #     while True:
-    #         if keyboard.is_pressed('z'):
-    #             print("You pressed 'q'")
-    #             break
-    #         time.sleep(0.1)
+    #     def main(stdscr):
+    #         stdscr.nodelay(True)
+    #         while True:
+    #             c = stdscr.getch()
+    #             if c == ord('q'):
+    #                 print("You pressed 'q'")
+    #                 break
+    #             # Your existing code here
+    #             time.sleep(0.1)
+    #
+    #     curses.wrapper(main)
 
 
 
