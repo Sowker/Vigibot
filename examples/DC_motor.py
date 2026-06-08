@@ -61,7 +61,7 @@ class DC_Motor():
             stop_time = 1
 
         if speed == 0:
-            step = actual_speed / (stop_time * 10)
+            step = self.actual_speed / (stop_time * 10)
         else:
             step = speed / (stop_time*10)
 
