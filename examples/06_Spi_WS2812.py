@@ -286,12 +286,12 @@ if __name__ == '__main__':
     print("spidev version is ", spidev.__version__)
     print("spidev device as show:")
     os.system("ls /dev/spi*")
-    
-    led = Adeept_SPI_LedPixel(10, 255)              # Use MOSI for /dev/spidev0 to drive the lights
+
+    led = Adeept_SPI_LedPixel(12, 255)              # Use MOSI for /dev/spidev0 to drive the lights
 
     try:
         if led.check_spi_state() != 0:
-            led.set_led_count(10)
+            led.set_led_count(12)
             led.set_all_led_color_data(255, 0, 0)
             led.show()
             time.sleep(0.5)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
             led.set_all_led_rgb([0, 255, 255])
             time.sleep(0.5)
 
-            led.set_led_count(10)
+            led.set_led_count(12)
             led.set_all_led_color_data(255, 255, 0)
             for i in range(255):
                 led.set_led_brightness(i)
