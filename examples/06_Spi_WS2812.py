@@ -282,21 +282,21 @@ class Adeept_SPI_LedPixel(threading.Thread):
         if sense == "L":
             while True:
                 for i in range (3):
-                    led.set_led_rgb_data(2+i, [255, 255, 0])
-                    led.set_led_rgb_data(11+i, [255, 255, 0])
+                    led.set_led_rgb_data(2+i, [255, 128, 0])
+                    led.set_led_rgb_data(11+i, [255, 128, 0])
                     led.show()
-                time.sleep(1)
+                time.sleep(0.5)
                 led.set_all_led_color(0, 0, 0)
-                time.sleep(1)
+                time.sleep(0.5)
         elif sense == "R":
             while True:
                 for i in range (3):
-                    led.set_led_rgb_data(5+i, [255, 255, 0])
-                    led.set_led_rgb_data(8+i, [255, 255, 0])
+                    led.set_led_rgb_data(5+i, [255, 128, 0])
+                    led.set_led_rgb_data(8+i, [255, 128, 0])
                     led.show()
-                time.sleep(1)
+                time.sleep(0.5)
                 led.set_all_led_color(0, 0, 0)
-                time.sleep(1)
+                time.sleep(0.5)
 
             
     
@@ -318,7 +318,7 @@ if __name__ == '__main__':
             led.set_all_led_color(0, 0, 0)
             time.sleep(0.2)
 
-            led.clignotant("L")
+            led.clignotant("R")
 
             '''while True:
             # Turn each LED red one after another (cumulative)
