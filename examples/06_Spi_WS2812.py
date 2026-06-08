@@ -318,7 +318,7 @@ if __name__ == '__main__':
             led.set_all_led_color(0, 0, 0)
             time.sleep(0.2)
 
-            led.clignotant(L)
+            led.clignotant("L")
 
             '''while True:
             # Turn each LED red one after another (cumulative)
