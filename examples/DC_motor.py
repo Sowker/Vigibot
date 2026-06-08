@@ -18,24 +18,24 @@ class DC_Motor():
         self.i2c = busio.I2C(SCL, SDA)
         # Create a simple PCA9685 class instance.
         #  pwm_motor.channels[7].duty_cycle = 0xFFFF
-        self.pwm_motor = PCA9685(i2c, address=0x5f)  # default 0x40
+        self.pwm_motor = PCA9685(self.i2c, address=0x5f)  # default 0x40
         self.pwm_motor.frequency = 50
 
-        self.motor1 = motor.DCMotor(pwm_motor.channels[MOTOR_M1_IN1], pwm_motor.channels[MOTOR_M1_IN2])
+        self.motor1 = motor.DCMotor(self.pwm_motor.channels[MOTOR_M1_IN1], self.pwm_motor.channels[MOTOR_M1_IN2])
         self.motor1.decay_mode = (motor.SLOW_DECAY)
 
         self.stopped = 1
         self.motorStop()
 
     def motorStop():  # Motor stops
-        motor1.throttle = 0
+        self.motor1.throttle = 0
         self.stopped = 1
 
     def _map(x, in_min, in_max, out_min, out_max):
         return (x - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
     def destroy():
-        motorStop()
+        self.motorStop()
         pwm_motor.deinit()
 
     def _power(direction, motor_speed):
@@ -61,7 +61,7 @@ class DC_Motor():
         actual_speed = 0
         for i in range(0, stop_time*10):
             actual_speed += step
-            _power(direction, actual_speed)
+            self._power(direction, actual_speed)
             time.sleep(0.1)
 
     def control(self, direction, motor_speed, duration=1, ramp=1, slow=0):
@@ -102,13 +102,13 @@ class DC_Motor():
 
 if __name__ == '__main__':
     try:
-        motor = DC_Motor()
+        my_motor = DC_Motor()
         for i in range(10):
-            motor.control(1, 100)
+            my_motor.control(1, 100)
 
             print("Forward")
             time.sleep(3)
-            motor.control(-1, 100)
+            my_motor.control(-1, 100)
             print("Backward")
             time.sleep(3)
         destroy()
