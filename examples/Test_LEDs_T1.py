@@ -61,6 +61,27 @@ def stop_blinkers():
         switch(num, 0)
 
 
+def appel_phares():
+    global blink_state
+    previous_state = blink_state
+    with blink_lock:
+        blink_state = None
+    stop_blinkers()
+
+    flash_duration = 0.08
+    print("Appel de phares")
+    for _ in range(3):
+        for num in (4, 5, 6, 7, 8, 9):
+            leds[num].value = 1.0
+        time.sleep(flash_duration)
+        for num in (4, 5, 6, 7, 8, 9):
+            leds[num].value = 0.0
+        time.sleep(flash_duration)
+
+    with blink_lock:
+        blink_state = previous_state
+
+
 def set_orange(r_num, g_num, on):
     if on:
         leds[r_num].value = 1.0
@@ -142,6 +163,9 @@ if __name__ == "__main__":
                 continue
             elif code == 'war':
                 set_blink('warning')
+                continue
+            elif code == 'ap':
+                appel_phares()
                 continue
 
             try:
