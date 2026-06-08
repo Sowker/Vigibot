@@ -256,7 +256,9 @@ class Adeept_SPI_LedPixel(threading.Thread):
         elif self.lightMode == 'police':
             self.policeProcessing()
         elif self.lightMode == 'breath':
-            self.breathProcessing()    
+            self.breathProcessing()
+        elif self.lightMode == 'clignotant':
+            self.clignotantProcessing()
     
     def run(self):
         while 1:
@@ -278,25 +280,28 @@ class Adeept_SPI_LedPixel(threading.Thread):
         else: return
 
     def clignotant(self, sense):
-        self.set_all_led_color(0, 0, 0)
-        if sense == "L":
-            while True:
-                for i in range (3):
-                    self.set_led_rgb_data(2+i, [255, 128, 0])
-                    self.set_led_rgb_data(11+i, [255, 128, 0])
-                    self.show()
-                time.sleep(0.5)
-                self.set_all_led_color(0, 0, 0)
-                time.sleep(0.5)
-        elif sense == "R":
-            while True:
-                for i in range (3):
-                    self.set_led_rgb_data(5+i, [255, 128, 0])
-                    self.set_led_rgb_data(8+i, [255, 128, 0])
-                    self.show()
-                time.sleep(0.5)
-                self.set_all_led_color(0, 0, 0)
-                time.sleep(0.5)
+        self.lightMode = 'clignotant'
+        self.sense = sense
+        self.resume()
+
+    def clignotantProcessing(self):
+        while self.lightMode == 'clignotant':
+            self.set_all_led_color(0, 0, 0)
+
+            if self.sense == "L":
+                for i in range(3):
+                    self.set_led_rgb_data(2 + i, [255, 128, 0])
+                    self.set_led_rgb_data(11 + i, [255, 128, 0])
+            elif self.sense == "R":
+                for i in range(3):
+                    self.set_led_rgb_data(5 + i, [255, 128, 0])
+                    self.set_led_rgb_data(8 + i, [255, 128, 0])
+
+            self.show()
+            time.sleep(0.5)
+
+            self.set_all_led_color(0, 0, 0)
+            time.sleep(0.5)
 
             
     
