@@ -298,16 +298,17 @@ if __name__ == '__main__':
             led.set_all_led_color(0, 0, 0)
             time.sleep(0.2)
 
+            while True:
             # Turn each LED red one after another (cumulative)
-            for i in range(led.led_count):
-                led.set_led_rgb_data(i, [255, 0, 0])
-                led.show()
-                time.sleep(0.15)
+                for i in range(led.led_count):
+                    led.set_led_rgb_data(i, [255, 0, 0])
+                    led.show()
+                    time.sleep(1)
 
-            # Then set all LEDs to white
-            led.set_all_led_color(255, 255, 255)
-            led.show()
-            time.sleep(1)
+                # Then set all LEDs to white
+                led.set_all_led_color(255, 255, 255)
+                led.show()
+                time.sleep(1)
         else:
             led.led_close()
     except KeyboardInterrupt:
