@@ -1,5 +1,6 @@
 from gpiozero import LED
 import time
+import threading
 
 # 3 LED onboard (HAT V3.1) - logique normale : GPIO=1 -> allumee
 LED1 = 9
@@ -15,6 +16,10 @@ Right_G = 5
 Right_B = 6
 
 leds = {}
+
+# Etat du clignotant : None, 'left', 'right' ou 'warning'
+blink_state = None
+blink_lock = threading.Lock()
 
 
 def setup():
@@ -46,17 +51,103 @@ def set_all_switch_off():
         switch(num, 0)
 
 
+def stop_blinkers():
+    for num in (4, 5, 7, 8):
+        switch(num, 0)
+
+
+def cancel_blink():
+    global blink_state
+    with blink_lock:
+        if blink_state is None:
+            return
+        blink_state = None
+    stop_blinkers()
+    print("Clignotant coupe (commande manuelle recue)")
+
+
+def set_blink(mode):
+    global blink_state
+    with blink_lock:
+        # Retaper la meme commande desactive le clignotant en cours
+        blink_state = None if blink_state == mode else mode
+        new_state = blink_state
+
+    if new_state is None:
+        stop_blinkers()
+        print("Clignotants eteints")
+    elif new_state == 'left':
+        print("Clignotant gauche active")
+    elif new_state == 'right':
+        print("Clignotant droit active")
+    elif new_state == 'warning':
+        print("Warnings actives")
+
+
+def blink_worker():
+    blink_period = 0.5
+    while True:
+        with blink_lock:
+            state = blink_state
+
+        if state == 'left':
+            switch(4, 1)
+            switch(5, 1)
+            time.sleep(blink_period)
+            switch(4, 0)
+            switch(5, 0)
+            time.sleep(blink_period)
+        elif state == 'right':
+            switch(7, 1)
+            switch(8, 1)
+            time.sleep(blink_period)
+            switch(7, 0)
+            switch(8, 0)
+            time.sleep(blink_period)
+        elif state == 'warning':
+            switch(4, 1)
+            switch(5, 1)
+            switch(7, 1)
+            switch(8, 1)
+            time.sleep(blink_period)
+            switch(4, 0)
+            switch(5, 0)
+            switch(7, 0)
+            switch(8, 0)
+            time.sleep(blink_period)
+        else:
+            time.sleep(0.1)
+
+
 if __name__ == "__main__":
     setup()
+    threading.Thread(target=blink_worker, daemon=True).start()
+
     try:
         while True:
             code = input()
             if code == 'q':
                 break
+            elif code == 'cl':
+                set_blink('left')
+                continue
+            elif code == 'cr':
+                set_blink('right')
+                continue
+            elif code == 'war':
+                set_blink('warning')
+                continue
 
-            code = int(code)
-            action = code // 10 
-            num = code % 10 
+            try:
+                code = int(code)
+            except ValueError:
+                print('Wrong Command: Example--11 pour allumer LED1, cl/cr/war pour les clignotants')
+                continue
+
+            cancel_blink()
+
+            action = code // 10
+            num = code % 10
 
             if action == 1:
                 switch(num, 1)
@@ -65,4 +156,6 @@ if __name__ == "__main__":
             else:
                 print('Wrong Command: Example--11 pour allumer LED1')
     finally:
+        with blink_lock:
+            blink_state = None
         set_all_switch_off()
