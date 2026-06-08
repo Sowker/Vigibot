@@ -4,7 +4,7 @@ import numpy
 from numpy import sin, cos, pi
 import time
 class Adeept_SPI_LedPixel(threading.Thread):
-    def __init__(self, count = 10, bright = 255, sequence='GRB', bus = 0, device = 0, *args, **kwargs):
+    def __init__(self, count = 12, bright = 255, sequence='GRB', bus = 0, device = 0, *args, **kwargs):
         self.set_led_type(sequence)
         self.set_led_count(count)
         self.set_led_brightness(bright)
@@ -318,9 +318,11 @@ if __name__ == '__main__':
             while True:
                 for j in range(255):
                     for i in range(led.led_count):
-                        led.set_led_rgb_data(i, led.wheel((round(i * 255 / led.led_count) + j)%256))
+                        set_led_color_data(i, 255, 0, 0)
                     led.show()
-                    time.sleep(0.002)
+                    time.sleep(1)
+                set_all_led_color_data(255, 255, 255)
+                led.show()
         else:
             led.led_close()
     except KeyboardInterrupt:
