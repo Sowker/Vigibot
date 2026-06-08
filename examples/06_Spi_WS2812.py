@@ -265,7 +265,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
             pass
 
     def attributeRGB(self, index, color, intensity): #index: int; color: str (r,g,b,n); intensity : int (0 to 255)
-        if 0 < index < 14 and 0 <= intensity <= 255:
+        if 0 <= index <= 13 and 0 <= intensity <= 255:
             if color == "R":
                 self.set_led_color(index, intensity, 0, 0)
             elif color == "G":
@@ -323,7 +323,7 @@ if __name__ == '__main__':
                 color = input("Quelle couleurs? (R,G,B ou N)")
                 intens = int(input("Quelle intensité? (0 à 255)"))
                 led.attributeRGB(index, color, intens)
-
+                time.sleep(0.2)
         else:
             led.led_close()
     except KeyboardInterrupt:
