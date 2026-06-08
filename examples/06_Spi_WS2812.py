@@ -263,7 +263,21 @@ class Adeept_SPI_LedPixel(threading.Thread):
             self.__flag.wait()
             self.lightChange()
             pass
-        
+
+    def attributeRGB(self, index, color, intensity): #index: int; color: str (r,g,b,n); intensity : int (0 to 255)
+        if 0 < index < 14 and 0 <= intensity <= 255:
+            if color == "R":
+                set_led_color(index, intensity, 0, 0)
+            elif color == "G":
+                set_led_color(index, 0, intensity, 0)
+            elif color == "B":
+                set_led_color(index, 0, 0, intensity)
+            elif color == "N":
+                set_led_color(index, 0, 0, 0)
+            else: return
+        else: return
+
+
             
     
 if __name__ == '__main__':
@@ -273,7 +287,7 @@ if __name__ == '__main__':
     print("spidev device as show:")
     os.system("ls /dev/spi*")
     
-    led = Adeept_SPI_LedPixel(8, 255)              # Use MOSI for /dev/spidev0 to drive the lights
+    led = Adeept_SPI_LedPixel(10, 255)              # Use MOSI for /dev/spidev0 to drive the lights
 
     try:
         if led.check_spi_state() != 0:
