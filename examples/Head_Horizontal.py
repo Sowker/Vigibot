@@ -14,29 +14,29 @@ pca.frequency = 50
 # range, but the default is to use 180 degrees. You can specify the expected range if you wish:
 class servo_head():
     def __init__(self,ID):
-        self.servo = servo.Servo(pca.channels[ID], min_pulse=500, max_pulse=2400,actuation_range=135)
+        self.servo = servo.Servo(pca.channels[ID], min_pulse=500, max_pulse=2400,actuation_range=180)
         self.servo.angle = 0  # Initial direction of the servo
         self.angle = servo.angle
 
     def set_angle(self, angle):
         self.angle = angle
 
-    def right(self):
-        for i in range(180):
-            self.set_angle(180+i)
+    def right(self, max):
+        for i in range(max):
+            self.set_angle(self.angle + i)
             time.sleep(0.01)
 
-    def left(self):
-        for i in range(180):
-            self.set_angle(180 - i)
+    def left(self, max):
+        for i in range(max):
+            self.set_angle(self.angle - i)
             time.sleep(0.01)
 
     def test(self):
         while True:
             print("Right")
-            self.right()
+            self.right(180)
             print("Left")
-            self.left()
+            self.left(180)
 
 if __name__ == "__main__":
     head = servo_head(1)
