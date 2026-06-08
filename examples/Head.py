@@ -58,6 +58,14 @@ class Head():
         self.vertical = Head.servo_motor(2)
         self.weel = Head.servo_motor(0)
 
+    def right(self):
+        self.horizontal.set_angle(self.horizontal.servo.angle - 1)
+        self.weel.set_angle(self.weel.servo.angle - 1)
+
+    def left(self):
+        self.horizontal.set_angle(self.horizontal.servo.angle + 1)
+        self.weel.set_angle(self.weel.servo.angle + 1)
+
     def test(self):
         for i in range (30):
             self.horizontal.set_angle(self.horizontal.servo.angle + 1)
