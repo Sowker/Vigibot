@@ -1,6 +1,9 @@
-from gpiozero import LED
+from gpiozero import LED, PWMOutputDevice
 import time
 import threading
+
+# Ratio vert/rouge pour obtenir un orange plutot qu'un jaune (R a fond, G attenue)
+ORANGE_GREEN_LEVEL = 0.45
 
 # 3 LED onboard (HAT V3.1) - logique normale : GPIO=1 -> allumee
 LED1 = 9
@@ -8,9 +11,11 @@ LED2 = 25
 LED3 = 11
 
 # 6 LED RGB des feux avant - logique inversee : GPIO=0 -> allumee
-Left_R = 19
-Left_G = 0
-Left_B = 13
+# Mapping verifie empiriquement (cf. tests 14/15/16 et 17/18/19) :
+# cote gauche, le cablage est "tourne" par rapport aux noms des broches
+Left_R = 13
+Left_G = 19
+Left_B = 0
 Right_R = 1
 Right_G = 5
 Right_B = 6
@@ -26,12 +31,12 @@ def setup():
     leds[1] = LED(LED1)
     leds[2] = LED(LED2)
     leds[3] = LED(LED3)
-    leds[4] = LED(Left_R, active_high=False)
-    leds[5] = LED(Left_G, active_high=False)
-    leds[6] = LED(Left_B, active_high=False)
-    leds[7] = LED(Right_R, active_high=False)
-    leds[8] = LED(Right_G, active_high=False)
-    leds[9] = LED(Right_B, active_high=False)
+    leds[4] = PWMOutputDevice(Left_R, active_high=False)
+    leds[5] = PWMOutputDevice(Left_G, active_high=False)
+    leds[6] = PWMOutputDevice(Left_B, active_high=False)
+    leds[7] = PWMOutputDevice(Right_R, active_high=False)
+    leds[8] = PWMOutputDevice(Right_G, active_high=False)
+    leds[9] = PWMOutputDevice(Right_B, active_high=False)
 
 
 def switch(num, status):
@@ -54,6 +59,36 @@ def set_all_switch_off():
 def stop_blinkers():
     for num in (4, 5, 7, 8):
         switch(num, 0)
+
+
+def appel_phares():
+    global blink_state
+    previous_state = blink_state
+    with blink_lock:
+        blink_state = None
+    stop_blinkers()
+
+    flash_duration = 0.08
+    print("Appel de phares")
+    for _ in range(3):
+        for num in (4, 5, 6, 7, 8, 9):
+            leds[num].value = 1.0
+        time.sleep(flash_duration)
+        for num in (4, 5, 6, 7, 8, 9):
+            leds[num].value = 0.0
+        time.sleep(flash_duration)
+
+    with blink_lock:
+        blink_state = previous_state
+
+
+def set_orange(r_num, g_num, on):
+    if on:
+        leds[r_num].value = 1.0
+        leds[g_num].value = ORANGE_GREEN_LEVEL
+    else:
+        leds[r_num].value = 0.0
+        leds[g_num].value = 0.0
 
 
 def cancel_blink():
@@ -91,29 +126,21 @@ def blink_worker():
             state = blink_state
 
         if state == 'left':
-            switch(4, 1)
-            switch(5, 1)
+            set_orange(4, 5, True)
             time.sleep(blink_period)
-            switch(4, 0)
-            switch(5, 0)
+            set_orange(4, 5, False)
             time.sleep(blink_period)
         elif state == 'right':
-            switch(7, 1)
-            switch(8, 1)
+            set_orange(7, 8, True)
             time.sleep(blink_period)
-            switch(7, 0)
-            switch(8, 0)
+            set_orange(7, 8, False)
             time.sleep(blink_period)
         elif state == 'warning':
-            switch(4, 1)
-            switch(5, 1)
-            switch(7, 1)
-            switch(8, 1)
+            set_orange(4, 5, True)
+            set_orange(7, 8, True)
             time.sleep(blink_period)
-            switch(4, 0)
-            switch(5, 0)
-            switch(7, 0)
-            switch(8, 0)
+            set_orange(4, 5, False)
+            set_orange(7, 8, False)
             time.sleep(blink_period)
         else:
             time.sleep(0.1)
@@ -136,6 +163,9 @@ if __name__ == "__main__":
                 continue
             elif code == 'war':
                 set_blink('warning')
+                continue
+            elif code == 'ap':
+                appel_phares()
                 continue
 
             try:

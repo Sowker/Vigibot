@@ -265,37 +265,37 @@ class Adeept_SPI_LedPixel(threading.Thread):
             pass
 
     def attributeRGB(self, index, color, intensity): #index: int; color: str (r,g,b,n); intensity : int (0 to 255)
-        if 0 < index < 14 and 0 <= intensity <= 255:
+        if 0 <= index <= 13 and 0 <= intensity <= 255:
             if color == "R":
-                set_led_color(index, intensity, 0, 0)
+                self.set_led_color(index, intensity, 0, 0)
             elif color == "G":
-                set_led_color(index, 0, intensity, 0)
+                self.set_led_color(index, 0, intensity, 0)
             elif color == "B":
-                set_led_color(index, 0, 0, intensity)
+                self.set_led_color(index, 0, 0, intensity)
             elif color == "N":
-                set_led_color(index, 0, 0, 0)
+                self.set_led_color(index, 0, 0, 0)
             else: return
         else: return
 
     def clignotant(self, sense):
-        led.set_all_led_color(0, 0, 0)
+        self.set_all_led_color(0, 0, 0)
         if sense == "L":
             while True:
                 for i in range (3):
-                    led.set_led_rgb_data(2+i, [255, 128, 0])
-                    led.set_led_rgb_data(11+i, [255, 128, 0])
-                    led.show()
+                    self.set_led_rgb_data(2+i, [255, 128, 0])
+                    self.set_led_rgb_data(11+i, [255, 128, 0])
+                    self.show()
                 time.sleep(0.5)
-                led.set_all_led_color(0, 0, 0)
+                self.set_all_led_color(0, 0, 0)
                 time.sleep(0.5)
         elif sense == "R":
             while True:
                 for i in range (3):
-                    led.set_led_rgb_data(5+i, [255, 128, 0])
-                    led.set_led_rgb_data(8+i, [255, 128, 0])
-                    led.show()
+                    self.set_led_rgb_data(5+i, [255, 128, 0])
+                    self.set_led_rgb_data(8+i, [255, 128, 0])
+                    self.show()
                 time.sleep(0.5)
-                led.set_all_led_color(0, 0, 0)
+                self.set_all_led_color(0, 0, 0)
                 time.sleep(0.5)
 
             
@@ -319,22 +319,11 @@ if __name__ == '__main__':
             time.sleep(0.2)
 
             while True:
-                # Turn each LED red one after another (cumulative)
-                 for i in range(led.led_count):
-                    led.attributeRGB(i, "R", 255)
-                    time.sleep(1)
-                    led.attributeRGB(i, "G", 125)
-                    time.sleep(1)
-                    led.attributeRGB(i, "B", 255)
-                    time.sleep(1)
-                    led.attributeRGB(i, "N", 255)
-                    time.sleep(1)
-
-                    # Then set all LEDs to white
-                    led.set_all_led_color(255, 255, 255)
-                    led.show()
-                    time.sleep(1)
-
+                index = int(input("Quelle LED (1 à 14)"))
+                color = input("Quelle couleurs? (R,G,B ou N)")
+                intens = int(input("Quelle intensité? (0 à 255)"))
+                led.attributeRGB(index, color, intens)
+                time.sleep(0.2)
         else:
             led.led_close()
     except KeyboardInterrupt:
