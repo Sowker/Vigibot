@@ -15,7 +15,7 @@ pca.frequency = 50
 class servo_head():
     def __init__(self,ID):
         self.servo = servo.Servo(pca.channels[ID], min_pulse=500, max_pulse=2400,actuation_range=180)
-        self.servo.angle = 0  # Initial direction of the servo
+        self.servo.angle = 90
         self.angle = servo.angle
 
     def set_angle(self, angle):
@@ -34,9 +34,9 @@ class servo_head():
     def test(self):
         while True:
             print("Right")
-            self.right(180)
+            self.right(90)
             print("Left")
-            self.left(180)
+            self.left(90)
 
 if __name__ == "__main__":
     head = servo_head(1)
