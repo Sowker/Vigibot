@@ -1,4 +1,3 @@
-import time
 import threading
 import importlib.util
 import os
@@ -19,7 +18,6 @@ _spi_module = _load_module("spi_ws2812", "06_Spi_WS2812.py")
 Adeept_SPI_LedPixel = _spi_module.Adeept_SPI_LedPixel
 
 ORANGE_RGB = [255, 128, 0] 
-
 WS_LEFT = [2, 3, 4, 11, 12, 13]
 WS_RIGHT = [5, 6, 7, 8, 9, 10]
 
@@ -33,38 +31,26 @@ def set_strip(indices, on):
     strip.show()
 
 
-def stop_strip():
+_front_set_orange = front.set_orange
+_front_stop_blinkers = front.stop_blinkers
+
+
+def _set_orange_and_strip(r_num, g_num, on):
+    _front_set_orange(r_num, g_num, on)
+    if (r_num, g_num) == (4, 5):
+        set_strip(WS_LEFT, on)
+    elif (r_num, g_num) == (7, 8):
+        set_strip(WS_RIGHT, on)
+
+
+def _stop_blinkers_and_strip():
+    _front_stop_blinkers()
     set_strip(WS_LEFT, False)
     set_strip(WS_RIGHT, False)
 
 
-def strip_worker():
-
-    blink_period = 0.5
-    while True:
-        with front.blink_lock:
-            state = front.blink_state
-
-        if state == 'left':
-            set_strip(WS_LEFT, True)
-            time.sleep(blink_period)
-            set_strip(WS_LEFT, False)
-            time.sleep(blink_period)
-        elif state == 'right':
-            set_strip(WS_RIGHT, True)
-            time.sleep(blink_period)
-            set_strip(WS_RIGHT, False)
-            time.sleep(blink_period)
-        elif state == 'warning':
-            set_strip(WS_LEFT, True)
-            set_strip(WS_RIGHT, True)
-            time.sleep(blink_period)
-            set_strip(WS_LEFT, False)
-            set_strip(WS_RIGHT, False)
-            time.sleep(blink_period)
-        else:
-            stop_strip()
-            time.sleep(0.1)
+front.set_orange = _set_orange_and_strip
+front.stop_blinkers = _stop_blinkers_and_strip
 
 
 if __name__ == "__main__":
@@ -76,7 +62,6 @@ if __name__ == "__main__":
     strip.set_all_led_color(0, 0, 0)
 
     threading.Thread(target=front.blink_worker, daemon=True).start()
-    threading.Thread(target=strip_worker, daemon=True).start()
 
     print("=== Clignotants avant (LED RGB) + arriere (ruban WS2812) ===")
     print("Commandes identiques a Test_LEDs_T1 :")
@@ -125,5 +110,6 @@ if __name__ == "__main__":
         with front.blink_lock:
             front.blink_state = None
         front.set_all_switch_off()
-        stop_strip()
+        set_strip(WS_LEFT, False)
+        set_strip(WS_RIGHT, False)
         strip.led_close()
