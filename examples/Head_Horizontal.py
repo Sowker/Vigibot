@@ -23,19 +23,19 @@ class servo_head():
     def right(self, max):
         for i in range(max):
             self.set_angle(self.servo.angle + i)
-            time.sleep(0.01)
+            time.sleep(0.1)
 
     def left(self, max):
         for i in range(max):
             self.set_angle(self.servo.angle - i)
-            time.sleep(0.01)
+            time.sleep(0.1)
 
     def test(self):
         while True:
             print("Right")
-            self.right(90)
+            self.right(40)
             print("Left")
-            self.left(90)
+            self.left(40)
 
 if __name__ == "__main__":
     head = servo_head(1)
