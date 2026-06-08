@@ -16,19 +16,18 @@ class servo_head():
     def __init__(self,ID):
         self.servo = servo.Servo(pca.channels[ID], min_pulse=500, max_pulse=2400,actuation_range=180)
         self.servo.angle = 90
-        self.angle = self.servo.angle
 
     def set_angle(self, angle):
-        self.angle = angle
+        self.servo.angle = angle
 
     def right(self, max):
         for i in range(max):
-            self.set_angle(self.angle + i)
+            self.set_angle(self.servo.angle + i)
             time.sleep(0.01)
 
     def left(self, max):
         for i in range(max):
-            self.set_angle(self.angle - i)
+            self.set_angle(self.servo.angle - i)
             time.sleep(0.01)
 
     def test(self):
