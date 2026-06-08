@@ -5,6 +5,7 @@ import busio
 from adafruit_pca9685 import PCA9685
 from adafruit_motor import motor
 import curses
+import math
 
 # motor_EN_A: Pin7  |  motor_EN_B: Pin11
 # motor_A:  Pin8,Pin10    |  motor_B: Pin13,Pin12
@@ -65,7 +66,7 @@ class DC_Motor():
         else:
             step = speed / (stop_time*10)
 
-        for i in range(0, stop_time*10):
+        for i in range(0, math.round(stop_time*10)):
             if speed == 0:
                 self.actual_speed -= step
             else:
