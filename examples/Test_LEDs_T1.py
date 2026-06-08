@@ -8,9 +8,11 @@ LED2 = 25
 LED3 = 11
 
 # 6 LED RGB des feux avant - logique inversee : GPIO=0 -> allumee
-Left_R = 19
-Left_G = 0
-Left_B = 13
+# Mapping verifie empiriquement (cf. tests 14/15/16 et 17/18/19) :
+# cote gauche, le cablage est "tourne" par rapport aux noms des broches
+Left_R = 13
+Left_G = 19
+Left_B = 0
 Right_R = 1
 Right_G = 5
 Right_B = 6
