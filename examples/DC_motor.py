@@ -12,13 +12,13 @@ import curses
 
 class DC_Motor():
     def __init__(self):
-        self.MOTOR_M1_IN1 = 15  # Define the positive pole of M1
-        self.MOTOR_M1_IN2 = 14  # Define the negative pole of M1
+        MOTOR_M1_IN1 = 15  # Define the positive pole of M1
+        MOTOR_M1_IN2 = 14  # Define the negative pole of M1
         # def setup():
-        self.i2c = busio.I2C(SCL, SDA)
+        i2c = busio.I2C(SCL, SDA)
         # Create a simple PCA9685 class instance.
         #  pwm_motor.channels[7].duty_cycle = 0xFFFF
-        self.pwm_motor = PCA9685(self.i2c, address=0x5f)  # default 0x40
+        self.pwm_motor = PCA9685(i2c, address=0x5f)  # default 0x40
         self.pwm_motor.frequency = 50
 
         self.motor1 = motor.DCMotor(self.pwm_motor.channels[MOTOR_M1_IN1], self.pwm_motor.channels[MOTOR_M1_IN2])
