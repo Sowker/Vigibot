@@ -267,35 +267,35 @@ class Adeept_SPI_LedPixel(threading.Thread):
     def attributeRGB(self, index, color, intensity): #index: int; color: str (r,g,b,n); intensity : int (0 to 255)
         if 0 < index < 14 and 0 <= intensity <= 255:
             if color == "R":
-                set_led_color(index, intensity, 0, 0)
+                self.set_led_color(index, intensity, 0, 0)
             elif color == "G":
-                set_led_color(index, 0, intensity, 0)
+                self.set_led_color(index, 0, intensity, 0)
             elif color == "B":
-                set_led_color(index, 0, 0, intensity)
+                self.set_led_color(index, 0, 0, intensity)
             elif color == "N":
-                set_led_color(index, 0, 0, 0)
+                self.set_led_color(index, 0, 0, 0)
             else: return
         else: return
 
     def clignotant(self, sense):
-        led.set_all_led_color(0, 0, 0)
+        self.set_all_led_color(0, 0, 0)
         if sense == "L":
             while True:
                 for i in range (3):
-                    led.set_led_rgb_data(2+i, [255, 128, 0])
-                    led.set_led_rgb_data(11+i, [255, 128, 0])
-                    led.show()
+                    self.set_led_rgb_data(2+i, [255, 128, 0])
+                    self.set_led_rgb_data(11+i, [255, 128, 0])
+                    self.show()
                 time.sleep(0.5)
-                led.set_all_led_color(0, 0, 0)
+                self.set_all_led_color(0, 0, 0)
                 time.sleep(0.5)
         elif sense == "R":
             while True:
                 for i in range (3):
-                    led.set_led_rgb_data(5+i, [255, 128, 0])
-                    led.set_led_rgb_data(8+i, [255, 128, 0])
-                    led.show()
+                    self.set_led_rgb_data(5+i, [255, 128, 0])
+                    self.set_led_rgb_data(8+i, [255, 128, 0])
+                    self.show()
                 time.sleep(0.5)
-                led.set_all_led_color(0, 0, 0)
+                self.set_all_led_color(0, 0, 0)
                 time.sleep(0.5)
 
             
