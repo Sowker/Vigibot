@@ -264,6 +264,8 @@ class Adeept_SPI_LedPixel(threading.Thread):
             self.breathProcessing()
         elif self.lightMode == 'clignotant':
             self.clignotantProcessing()
+        elif self.lightMode == 'warning':
+            self.warningProcessing()
     
     def run(self):
         while 1:
@@ -295,10 +297,6 @@ class Adeept_SPI_LedPixel(threading.Thread):
     def clignotant_droit(self):
         self.clignotant("R")
 
-    def warning(self):
-        self.clignotant("R")
-        self.clignotant("L")
-
     def arreter_clignotants(self):
         self.pause()
 
@@ -329,7 +327,25 @@ class Adeept_SPI_LedPixel(threading.Thread):
             self.set_all_led_color(0, 0, 0)
             time.sleep(0.5)
 
-            
+    def warning(self):
+        self.lightMode = 'warning'
+
+    def arreter_warning(self):
+        self.pause()
+
+    def warningProcessing(self):
+        while self.lightMode == 'warning':
+            self.set_all_led_color(0, 0, 0)
+
+            for i in range(led.led_count):
+                self.set_led_rgb_data(i, [255, 128, 0])
+
+            self.show()
+            time.sleep(0.5)
+
+            self.set_all_led_color(0, 0, 0)
+            time.sleep(0.5)
+
     
 if __name__ == '__main__':
     import time
@@ -337,7 +353,7 @@ if __name__ == '__main__':
 
     # Create controller for 12 LEDs
     led = Adeept_SPI_LedPixel(14, 255)
-    led.start()# Use MOSI for /dev/spidev0 to drive the lights
+    led.start()  # Use MOSI for /dev/spidev0 to drive the lights
 
     try:
         if led.check_spi_state() != 0:
@@ -347,7 +363,7 @@ if __name__ == '__main__':
 
             led.warning()
             time.sleep(5)
-            led.arreter_clignotants()
+            led.arreter_warning()
             time.sleep(1)
 
         else:
