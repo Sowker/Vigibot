@@ -94,13 +94,15 @@ class Robot:
         self.state = RobotState()
         self._obstacle_threshold_mm = cfg.obstacle_mm
 
-        self.led = Adeept_SPI_LedPixel()
+        self.led = Adeept_SPI_LedPixel(14, 255)
 
     def init(self) -> None:
         self._log.info("══ Mise à zéro initiale ══")
         self.motor.reset()
         self.head.reset()
         time.sleep(0.5)
+        if self.led.check_spi_state() != 0:
+            self.led.start()
         self._log.info("Robot prêt.")
 
     def shutdown(self) -> None:
@@ -108,6 +110,7 @@ class Robot:
         self.motor.reset()
         self.head.shutdown()
         time.sleep(0.5)
+        self.led.led_close()
         self._pca.deinit()
         self._log.info("PCA9685 désactivé. Bonne journée !")
 
@@ -171,12 +174,16 @@ def thread_LED(robot: Robot, interval: float):
                 break
             action = robot.state.line_action
             if action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
+                print("gôche")
                 robot.led.clignotant_gauche()
             elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
+                print("droate")
                 robot.led.clignotant_droit()
             elif action == LineAction.LINE_LOST:
+                print("AAAAAAAHH")
                 robot.led.warning()
             elif action == LineAction.STRAIGHT:
+                print("opposite gay")
                 robot.led.arreter_clignotants()
                 robot.led.arreter_warning()
 
@@ -304,7 +311,7 @@ if __name__ == "__main__":
     threads = [
         threading.Thread(target=thread_ultrasonic, args=(robot, args.sensor_interval), name="US", daemon=True),
         threading.Thread(target=thread_line, args=(robot, args.sensor_interval), name="LINE", daemon=True),
-        threading.Thread(targer=thread_LED, args=(robot, args.sensor_interval), name="LED", daemon=True),
+        threading.Thread(target=thread_LED, args=(robot, args.sensor_interval), name="LED", daemon=True),
         threading.Thread(target=thread_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
     ]
 
