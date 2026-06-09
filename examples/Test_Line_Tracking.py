@@ -1,14 +1,56 @@
 import time
 import importlib.util
 import os
-import sys
-from gpiozero import TonalBuzzer
+from board import SCL, SDA
+import busio
+from adafruit_pca9685 import PCA9685
+from adafruit_motor import servo as adafruit_servo, motor as adafruit_motor
+from gpiozero import InputDevice, PWMOutputDevice
 
-# ---------------------------------------------------------------------------
-# Chargement dynamique des modules
-# ---------------------------------------------------------------------------
-_here    = os.path.dirname(os.path.abspath(__file__))
-_web_dir = os.path.abspath(os.path.join(_here, "..", "web"))
+# --------------------------------------------------------------------------
+# PCA9685 unique — partage servo tete ET moteurs DC sur le meme chip 0x5f.
+# Deux instances Python sur la meme adresse provoquent des conflits de
+# frequence et font trembler le servo ; ici il n'y en a qu'une.
+# --------------------------------------------------------------------------
+i2c = busio.I2C(SCL, SDA)
+pca = PCA9685(i2c, address=0x5f)
+pca.frequency = 50
+
+# --- Servo tete horizontale (canal 1, repris de Head.py) ---
+HEAD_CHANNEL   = 1
+HEAD_MIN_PULSE = 500
+HEAD_MAX_PULSE = 2400
+HEAD_LEFT      = 130
+HEAD_CENTER    = 90
+HEAD_RIGHT     = 50
+HEAD_STEP_DELAY = 0.01   # secondes entre chaque degre pour le retour centre
+
+head_servo = adafruit_servo.Servo(
+    pca.channels[HEAD_CHANNEL],
+    min_pulse=HEAD_MIN_PULSE,
+    max_pulse=HEAD_MAX_PULSE,
+    actuation_range=180,
+)
+head_servo.angle = HEAD_CENTER
+
+# --- Moteurs DC (canaux repris de move.py) ---
+# M1 gauche / M2 droit (M2 monte en sens inverse -> throttle negatif = avant)
+DRIVE    = 0.30   # throttle avant (0.0 - 1.0)
+TURN_IN  = 0.08   # throttle roue interieure en virage
+
+motor1 = adafruit_motor.DCMotor(pca.channels[15], pca.channels[14])
+motor1.decay_mode = adafruit_motor.SLOW_DECAY
+motor2 = adafruit_motor.DCMotor(pca.channels[12], pca.channels[13])
+motor2.decay_mode = adafruit_motor.SLOW_DECAY
+motor3 = adafruit_motor.DCMotor(pca.channels[11], pca.channels[10])
+motor3.decay_mode = adafruit_motor.SLOW_DECAY
+motor4 = adafruit_motor.DCMotor(pca.channels[8],  pca.channels[9])
+motor4.decay_mode = adafruit_motor.SLOW_DECAY
+
+# --------------------------------------------------------------------------
+# Chargement du module de capteurs de ligne (08_lineTracking.py)
+# --------------------------------------------------------------------------
+_here = os.path.dirname(os.path.abspath(__file__))
 
 
 def _load_module(name, filepath):
@@ -23,194 +65,261 @@ _lt_mod            = _load_module("line_tracking_08",
 LineTrackingModule = _lt_mod.LineTrackingModule
 Color              = _lt_mod.Color
 
-_servo_mod         = _load_module("test_servo_horizontal",
-                                  os.path.join(_here, "Test_Servo_Horizontal.py"))
-ServoHorizontal    = _servo_mod.ServoHorizontal
-
-_front_mod         = _load_module("test_leds_t1",
-                                  os.path.join(_here, "Test_LEDs_T1.py"))
-
-_spi_mod           = _load_module("spi_ws2812",
-                                  os.path.join(_here, "06_Spi_WS2812.py"))
+# --- WS2812 (ruban LED arriere) ---
+_spi_mod            = _load_module("spi_ws2812",
+                                   os.path.join(_here, "06_Spi_WS2812.py"))
 Adeept_SPI_LedPixel = _spi_mod.Adeept_SPI_LedPixel
 
-sys.path.insert(0, _web_dir)
-import move
+# --- LED RGB avant (GPIO, sans conflit PCA9685) ---
+ORANGE_GREEN = 0.45
+ORANGE_RGB   = [255, 128, 0]
+WS_LEFT      = [2, 3, 4, 11, 12, 13]
+WS_RIGHT     = [5, 6, 7, 8, 9, 10]
+WS_COUNT     = 14
+BLINK_HALF   = 5   # iterations (x0.1 s) par demi-periode -> 1 Hz
 
-# ---------------------------------------------------------------------------
-# Parametres
-# ---------------------------------------------------------------------------
-DRIVE_SPEED  = 28    # vitesse moteurs 0-100
-TURN_INNER   = 8     # vitesse de la roue interieure en virage (effet differentiel)
+led_left_r  = PWMOutputDevice(13, active_high=False)
+led_left_g  = PWMOutputDevice(19, active_high=False)
+led_right_r = PWMOutputDevice(1,  active_high=False)
+led_right_g = PWMOutputDevice(5,  active_high=False)
 
-HEAD_LEFT    = 130
-HEAD_CENTER  = 90
-HEAD_RIGHT   = 50
-
-ORANGE_GREEN = 0.45          # niveau vert pour simuler orange (LED RGB)
-ORANGE_RGB   = [255, 128, 0] # orange pour le ruban WS2812
-WS_COUNT     = 14            # nombre de LED sur le ruban
-
-BEEP_FREQ    = "A4"          # frequence des bips (note gpiozero)
-BEEP_ON      = 0.09          # duree bip actif (s)
-BEEP_OFF     = 0.07          # silence entre bips (s)
-WARN_PAUSE   = 1.3           # pause entre deux cycles d'alerte (s)
-
-# ---------------------------------------------------------------------------
-# Commande moteurs (differentiel — reprend les canaux de move.py)
-# ---------------------------------------------------------------------------
-
-def drive_straight(speed=DRIVE_SPEED):
-    move.Motor(1,  move.M1_Direction, speed)
-    move.Motor(2,  move.M2_Direction, speed)
+# ============================================================
+# BIPS (decommenter quand la section bips sera activee)
+# ============================================================
+# from gpiozero import TonalBuzzer
+# BEEP_FREQ  = "A4"
+# BEEP_ON    = 0.09
+# BEEP_OFF   = 0.07
+# WARN_PAUSE = 1.3
+# buzzer = TonalBuzzer(18)
+# ============================================================
 
 
-def drive_left(speed=DRIVE_SPEED):
-    """Roue gauche ralentie, roue droite a vitesse normale."""
-    move.Motor(1,  move.M1_Direction, TURN_INNER)
-    move.Motor(2,  move.M2_Direction, speed)
+# --------------------------------------------------------------------------
+# Mouvement servo tete
+# --------------------------------------------------------------------------
+
+def head_set(angle):
+    """Positionne la tete directement (PCA9685 unique = pas de tremblement)."""
+    head_servo.angle = max(10, min(170, int(angle)))
 
 
-def drive_right(speed=DRIVE_SPEED):
-    """Roue droite ralentie, roue gauche a vitesse normale."""
-    move.Motor(1,  move.M1_Direction, speed)
-    move.Motor(2,  move.M2_Direction, TURN_INNER)
-
-
-# ---------------------------------------------------------------------------
-# Alerte orange (LEDs avant RGB + ruban WS2812 arriere)
-# ---------------------------------------------------------------------------
-
-def _set_all_orange(front, strip, on):
-    """Allume ou eteint toutes les LED orange (avant + arriere)."""
-    if on:
-        front.leds[4].value = 1.0
-        front.leds[5].value = ORANGE_GREEN
-        front.leds[7].value = 1.0
-        front.leds[8].value = ORANGE_GREEN
+def head_center():
+    """Retour doux vers 90 degres (meme logique que Head.py finish())."""
+    current = head_servo.angle or HEAD_CENTER
+    if current > HEAD_CENTER:
+        for a in range(int(current), HEAD_CENTER, -1):
+            head_servo.angle = a
+            time.sleep(HEAD_STEP_DELAY)
     else:
-        for num in (4, 5, 7, 8):
-            front.leds[num].value = 0.0
+        for a in range(int(current), HEAD_CENTER):
+            head_servo.angle = a
+            time.sleep(HEAD_STEP_DELAY)
+    head_servo.angle = HEAD_CENTER
 
+
+# --------------------------------------------------------------------------
+# Mouvement moteurs (differentiel M1 gauche / M2 droit)
+# --------------------------------------------------------------------------
+
+def motors_stop():
+    motor1.throttle = 0
+    motor2.throttle = 0
+    motor3.throttle = 0
+    motor4.throttle = 0
+
+
+def drive_straight():
+    motor1.throttle =  DRIVE    # M1 gauche avant
+    motor2.throttle = -DRIVE    # M2 droit  avant (monte en sens inverse)
+    motor3.throttle =  DRIVE
+    motor4.throttle = -DRIVE
+
+
+def drive_left():
+    """Roue gauche ralentie, roue droite pleine vitesse."""
+    motor1.throttle =  TURN_IN
+    motor2.throttle = -DRIVE
+    motor3.throttle =  TURN_IN
+    motor4.throttle = -DRIVE
+
+
+def drive_right():
+    """Roue droite ralentie, roue gauche pleine vitesse."""
+    motor1.throttle =  DRIVE
+    motor2.throttle = -TURN_IN
+    motor3.throttle =  DRIVE
+    motor4.throttle = -TURN_IN
+
+
+# --------------------------------------------------------------------------
+# Clignotants directionnels (avant GPIO + arriere WS2812)
+# --------------------------------------------------------------------------
+
+def update_blinkers(side, tick, strip):
+    on   = (tick % (2 * BLINK_HALF)) < BLINK_HALF
+    l_on = (side == "left")  and on
+    r_on = (side == "right") and on
+
+    led_left_r.value  = 1.0          if l_on else 0.0
+    led_left_g.value  = ORANGE_GREEN if l_on else 0.0
+    led_right_r.value = 1.0          if r_on else 0.0
+    led_right_g.value = ORANGE_GREEN if r_on else 0.0
+
+    for i in WS_LEFT:
+        strip.set_led_rgb_data(i, ORANGE_RGB if l_on else [0, 0, 0])
+    for i in WS_RIGHT:
+        strip.set_led_rgb_data(i, ORANGE_RGB if r_on else [0, 0, 0])
+    strip.show()
+
+
+def stop_blinkers(strip):
+    led_left_r.value  = 0.0
+    led_left_g.value  = 0.0
+    led_right_r.value = 0.0
+    led_right_g.value = 0.0
+    for i in WS_LEFT + WS_RIGHT:
+        strip.set_led_rgb_data(i, [0, 0, 0])
+    strip.show()
+
+
+# --------------------------------------------------------------------------
+# Alerte ligne perdue
+# --------------------------------------------------------------------------
+
+def _all_orange(strip, on):
     color = ORANGE_RGB if on else [0, 0, 0]
+    led_left_r.value  = 1.0          if on else 0.0
+    led_left_g.value  = ORANGE_GREEN if on else 0.0
+    led_right_r.value = 1.0          if on else 0.0
+    led_right_g.value = ORANGE_GREEN if on else 0.0
     for i in range(WS_COUNT):
         strip.set_led_rgb_data(i, color)
     strip.show()
 
 
-def warning_cycle(front, strip, buzzer):
-    """Un cycle d'alerte : 2 bips rapides + flash orange, puis pause.
+def warning_cycle(strip):
+    """Flash orange sur toutes les LED x2.
 
-    Reproduit le comportement des vehicules encombrants / pannes sur
-    autoroute : deux eclairs orange brefs suivis d'une pause (~1,5 s).
-    """
+    ============================================================
+    BIPS : decommenter le bloc ci-dessous quand c'est pret
+    ============================================================
     for _ in range(2):
-        _set_all_orange(front, strip, True)
+        _all_orange(strip, True)
         buzzer.play(BEEP_FREQ)
         time.sleep(BEEP_ON)
-        _set_all_orange(front, strip, False)
+        _all_orange(strip, False)
         buzzer.stop()
         time.sleep(BEEP_OFF)
-
     time.sleep(WARN_PAUSE)
-
-
-# ---------------------------------------------------------------------------
-# Logique de suivi de ligne
-# ---------------------------------------------------------------------------
-
-def process_line(left, middle, right, head):
-    """Applique la direction roues + tete selon les 3 capteurs.
-
-    Convention (08_lineTracking.py) : 0 = noir detecte, 1 = sol blanc.
-    Retourne (action_str, state) ou state est 'tracking' ou 'lost'.
+    ============================================================
     """
-    # --- ligne au centre ---
-    if middle == 0 and left == 1 and right == 1:
-        head.set_angle(HEAD_CENTER)
-        drive_straight()
-        return f"{Color.ACTION_GO}Tout droit{Color.END}", "tracking"
+    # --- version sans bips (active pour l'instant) ---
+    for _ in range(2):
+        _all_orange(strip, True)
+        time.sleep(0.09)
+        _all_orange(strip, False)
+        time.sleep(0.07)
+    time.sleep(1.3)
 
-    # --- derive a droite : capteur gauche capte le noir en premier ---
+
+# --------------------------------------------------------------------------
+# Logique de suivi de ligne
+# --------------------------------------------------------------------------
+
+def process_line(left, middle, right):
+    """Retourne (action_str, state, blink_side).
+    Convention : 0 = noir detecte, 1 = sol blanc.
+    """
+    # ligne centree
+    if middle == 0 and left == 1 and right == 1:
+        head_set(HEAD_CENTER)
+        drive_straight()
+        return f"{Color.ACTION_GO}Tout droit{Color.END}", "tracking", None
+
+    # capteur gauche (+ milieu) sur noir -> virer a gauche
     if left == 0 and middle == 0 and right == 1:
-        head.set_angle(HEAD_LEFT)
+        head_set(HEAD_LEFT)
         drive_left()
-        return f"{Color.ACTION_TURN}Gauche (leger) ←{Color.END}", "tracking"
+        return f"{Color.ACTION_TURN}Gauche leger ←{Color.END}", "tracking", "left"
 
     if left == 0 and middle == 1 and right == 1:
-        head.set_angle(HEAD_LEFT)
+        head_set(HEAD_LEFT)
         drive_left()
-        return f"{Color.ACTION_TURN}Gauche ←{Color.END}", "tracking"
+        return f"{Color.ACTION_TURN}Gauche ←{Color.END}", "tracking", "left"
 
-    # --- derive a gauche : capteur droit capte le noir ---
+    # capteur droit (+ milieu) sur noir -> virer a droite
     if left == 1 and middle == 0 and right == 0:
-        head.set_angle(HEAD_RIGHT)
+        head_set(HEAD_RIGHT)
         drive_right()
-        return f"{Color.ACTION_TURN}Droite (leger) →{Color.END}", "tracking"
+        return f"{Color.ACTION_TURN}Droite leger →{Color.END}", "tracking", "right"
 
     if left == 1 and middle == 1 and right == 0:
-        head.set_angle(HEAD_RIGHT)
+        head_set(HEAD_RIGHT)
         drive_right()
-        return f"{Color.ACTION_TURN}Droite →{Color.END}", "tracking"
+        return f"{Color.ACTION_TURN}Droite →{Color.END}", "tracking", "right"
 
-    # --- intersection (tous sur noir) : continuer tout droit ---
+    # intersection (tous sur noir) -> continuer tout droit
     if left == 0 and middle == 0 and right == 0:
-        head.set_angle(HEAD_CENTER)
+        head_set(HEAD_CENTER)
         drive_straight()
-        return f"{Color.ACTION_GO}Intersection{Color.END}", "tracking"
+        return f"{Color.ACTION_GO}Intersection{Color.END}", "tracking", None
 
-    # --- ligne perdue (tous sur blanc) ---
-    head.set_angle(HEAD_CENTER)
-    move.motorStop()
-    return f"{Color.ACTION_WARN}Ligne perdue !{Color.END}", "lost"
+    # ligne perdue (tous sur blanc)
+    head_set(HEAD_CENTER)
+    motors_stop()
+    return f"{Color.ACTION_WARN}Ligne perdue !{Color.END}", "lost", None
 
 
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # Point d'entree
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    move.setup()
-    _front_mod.setup()
-
     sensors = LineTrackingModule(pin_left=22, pin_middle=27, pin_right=17)
-    head    = ServoHorizontal(channel=1)
     strip   = Adeept_SPI_LedPixel(WS_COUNT, 255)
-    buzzer  = TonalBuzzer(18)
 
     if strip.check_spi_state() == 0:
         print("Attention : SPI indisponible, ruban WS2812 desactive")
     strip.set_all_led_color(0, 0, 0)
 
-    print("=== Test Line Tracking (roues + tete) ===")
+    print("=== Test Line Tracking (roues + tete + clignotants) ===")
     print("0 = ligne noire  |  1 = sol blanc")
     print("Ctrl+C pour arreter\n")
 
     last_action = None
+    tick        = 0
 
     try:
         while True:
-            left, middle, right = sensors.read()
-            action, state       = process_line(left, middle, right, head)
-            visual              = sensors.get_visual_bar()
-            raw                 = f"(L:{left} M:{middle} R:{right})"
+            left, middle, right       = sensors.read()
+            action, state, blink_side = process_line(left, middle, right)
+            visual                    = sensors.get_visual_bar()
+            raw                       = f"(L:{left} M:{middle} R:{right})"
 
             if action != last_action:
-                print(f"{visual} {raw:<14} -> {action}")
+                print(f"\n{visual} {raw:<14} -> {action}")
                 last_action = action
 
             if state == "lost":
-                warning_cycle(_front_mod, strip, buzzer)
+                stop_blinkers(strip)
+                warning_cycle(strip)
+                tick = 0
             else:
-                # Affichage live en mode suivi
+                update_blinkers(blink_side, tick, strip)
                 print(f"{visual} {raw}", end="\r")
+                tick += 1
                 time.sleep(0.1)
 
     except KeyboardInterrupt:
         print("\nArret — retour au centre et liberation GPIO...")
-        move.motorStop()
-        _set_all_orange(_front_mod, strip, False)
-        head.center()
-        move.destroy()
+
+    finally:
+        # Arret propre garanti meme en cas d'erreur
+        motors_stop()
+        stop_blinkers(strip)
+        head_center()
+        head_servo.angle = None   # relache le servo (stoppe le signal PWM)
         strip.led_close()
+        pca.deinit()              # libere le PCA9685 (servo + moteurs)
         print("Programme termine.")
