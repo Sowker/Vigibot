@@ -12,12 +12,15 @@
 # ═══════════════════════════════════════════════════════════════════
 #  IMPORTS
 # ═══════════════════════════════════════════════════════════════════
-
+import keyboard
 import time
 import threading
 import argparse
 from dataclasses import dataclass, field
 from typing import Optional
+
+from t6_line_tracking import PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
+
 
 from board import SCL, SDA
 import busio
@@ -29,7 +32,7 @@ import logger
 from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
-from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
+from work.t3_servomotors import CHANNEL_SERVO_VERTICAL
 
 # ═══════════════════════════════════════════════════════════════════
 #  CONSTANTES DE CONFIGURATION
@@ -59,7 +62,6 @@ class RobotState:
 
     # ── Données capteurs synthétisées ──────────────────────────────
     distance_mm: float = 9999.0
-    line_action: LineAction = LineAction.LINE_LOST  # Stockage direct de l'action décodée
 
     # ── Commandes de supervision ──────────────────────────────────
     running:        bool = True    # False → tous les threads s'arrêtent
@@ -83,7 +85,6 @@ class Robot:
         self._pca.frequency = PCA_FREQUENCY_HZ
 
         self.ultrasonic   = UltrasonicSensor(cfg.us_trigger, cfg.us_echo)
-        self.line_tracker = LineTracker(cfg.line_left, cfg.line_mid, cfg.line_right)
         self.motor        = DCMotor(self._pca)
         self.head         = Head(self._pca)
 
@@ -116,7 +117,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
-    last_action: Optional[LineAction] = None
+    keys_state = {'z': False, 'q': False, 's':False, 'd':False, # z q s d to control the direction
+                  'o': False, 'l': False, # o l to control the head up and down
+                  }
+    vertical_angle = 0
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -124,7 +128,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
             if not robot.state.running:
                 break
             emergency = robot.state.emergency_stop
-            action    = robot.state.line_action
 
         # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
         if emergency:
@@ -134,40 +137,37 @@ def thread_controller(robot: Robot, interval: float) -> None:
             time.sleep(interval)
             continue
 
-        # ── Suivi de ligne décodé (Priorité 2) ────────────────────
-        if action != last_action:
-            log.info("Changement de comportement → %s", action.name)
-            last_action = action
-
-        if action == LineAction.STRAIGHT:
-            robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-
-        elif action == LineAction.TURN_LEFT_SOFT:
-            robot.head.steer_left(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
-
-        elif action == LineAction.TURN_RIGHT_SOFT:
-            robot.head.steer_right(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
-
-        elif action == LineAction.TURN_LEFT_HARD:
-            robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
-
-        elif action == LineAction.TURN_RIGHT_HARD:
-            robot.head.steer_right(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
-
-        elif action == LineAction.INTERSECTION:
-            robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-            log.info("Intersection détectée — passage tout droit")
-
-        else:  # LineAction.LINE_LOST
+        # s'il y a un changement de touche pour avancer ou reculer on stop le robot
+        if keyboard.is_pressed('z') != keys_state['z'] or keyboard.is_pressed('s') != keys_state['s']:
             robot.motor.stop()
+        # s'il y a un changement de touche pour tourner à droite ou à gauche on mets les roues au centre
+        if keyboard.is_pressed('q') != keys_state['q'] or keyboard.is_pressed('d') != keys_state['d']:
             robot.head.steer_center()
-            log.warning("Ligne perdue — recherche active / attente…")
+        # s'il y a un changement de touche pour la tête haut/bas on la met au centre sur cet axe
+        if keyboard.is_pressed('o') != keys_state['o'] or keyboard.is_pressed('l') != keys_state['l']:
+            robot.head.set_angle_motor(CHANNEL_SERVO_VERTICAL, 0)
+
+        # mise à jour des états de touches préssées
+        keys_state = {'z': keyboard.is_pressed('z'), 'q': keyboard.is_pressed('q'), 's': keyboard.is_pressed('s'), 'd': keyboard.is_pressed('d'),  # z q s d to control the direction
+                      'o': keyboard.is_pressed('o'), 'l': keyboard.is_pressed('l')  # o k l m to control the head
+        }
+
+        if keyboard.is_pressed('z') and not keys_state['z']:
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+        elif keyboard.is_pressed('s') and not keys_state['s']:
+            robot.motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT)
+
+        if keyboard.is_pressed('q') and not keys_state['q']:
+            robot.head.steer_right(STEER_HARD_DEG)
+        elif keyboard.is_pressed('d') and not keys_state['d']:
+            robot.head.steer_left(STEER_HARD_DEG)
+
+        if keyboard.is_pressed('o') and not keys_state['o']:
+            vertical_angle += 5
+        elif keyboard.is_pressed('l') and not keys_state['l']:
+            vertical_angle -= 5
+
+        robot.head.set_angle_motor(CHANNEL_SERVO_VERTICAL, vertical_angle)
 
         time.sleep(interval)
 
@@ -183,7 +183,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Robot Line Follower — Team C — MasterCamp SE 2026",
+        description="Robot Keyboard controlled — Team C — MasterCamp SE 2026",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
@@ -218,15 +218,13 @@ if __name__ == "__main__":
 
     log = logger.get_logger("MAIN")
     log.info("╔══════════════════════════════════════════════╗")
-    log.info("║  Robot Line Follower — Team C — SE 2026      ║")
+    log.info("║ Robot Keyboard Controlled — Team C — SE 2026 ║")
     log.info("╚══════════════════════════════════════════════╝")
 
     robot = Robot(args)
     robot.init()
 
     threads = [
-        threading.Thread(target=thread_ultrasonic, args=(robot, args.sensor_interval), name="US", daemon=True),
-        threading.Thread(target=thread_line, args=(robot, args.sensor_interval), name="LINE", daemon=True),
         threading.Thread(target=thread_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
     ]
 
@@ -256,33 +254,3 @@ if __name__ == "__main__":
 
     log.info("Programme terminé. Au revoir !")
     log.info("Program developed by Team C — MasterCamp SE 2026.")
-
-
-
-
-import keyboard  # pip install keyboard
-try:
-    while True:
-        if keyboard.is_pressed('z'):
-            print("Forward")
-        elif keyboard.is_pressed('s'):
-            print("Backward")
-
-        if keyboard.is_pressed('q'):
-            print("Right")
-        elif keyboard.is_pressed('d'):
-            print("Left")
-
-        if keyboard.is_pressed('o'):
-            print("Head up")
-        elif keyboard.is_pressed('l'):
-            print("Head down")
-
-        if keyboard.is_pressed('k'):
-            print("Head right")
-        elif keyboard.is_pressed('m'):
-            print("Head left")
-
-        time.sleep(0.1)
-except KeyboardInterrupt:
-    print("User interrupt, end of keyboard control.")

@@ -102,9 +102,7 @@ class DCMotor:
         else:
             self._ramp(speed_pct)
 
-print("test")
 if __name__ == '__main__':
-    print("yep")
     # test automatique, avancé reculé et arrêt, le tout en douceur
     # Pour le contrôle avec le clavier, voir le fichier keyboard_control.py
     i2c = busio.I2C(SCL, SDA)
