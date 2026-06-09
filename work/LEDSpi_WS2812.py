@@ -329,18 +329,28 @@ class Adeept_SPI_LedPixel(threading.Thread):
 
     def warning(self):
         self.lightMode = 'warning'
+        self.resume()
 
     def arreter_warning(self):
         self.pause()
 
     def warningProcessing(self):
+        print("DEBUG: entering warningProcessing")
         while self.lightMode == 'warning':
+            print("DEBUG: warning loop, lightMode=", self.lightMode)
             self.set_all_led_color(0, 0, 0)
 
-            for i in range(led.led_count):
+            for i in range(self.led_count):
                 self.set_led_rgb_data(i, [255, 128, 0])
 
+            try:
+                s = sum(self.led_color)
+            except Exception:
+                s = None
+            print("DEBUG: led_color sum =", s, "led_init_state=", getattr(self, 'led_init_state', None))
+
             self.show()
+            print("DEBUG: show called")
             time.sleep(0.5)
 
             self.set_all_led_color(0, 0, 0)
