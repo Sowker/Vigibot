@@ -94,37 +94,36 @@ class DC_Motor():
             else:
                 self._ramp(1, motor_speed)
 
-    # def run(self, ramp=1, slow=0):
-    #     '''
-    #     Run by reacting to the keyboard
-    #     '''
-    #     def main(stdscr):
-    #         stdscr.nodelay(True)
-    #         while True:
-    #             c = stdscr.getch()
-    #             if c == ord('q'):
-    #                 print("You pressed 'q'")
-    #                 break
-    #             # Your existing code here
-    #             time.sleep(0.1)
-    #
-    #     curses.wrapper(main)
-
-
-
 
 if __name__ == '__main__':
-    my_motor = DC_Motor()
-    try:
-        for i in range(10):
-            my_motor.control(1, 100)
 
-            print("Forward")
-            time.sleep(3)
-            my_motor.control(-1, 100)
-            print("Backward")
-            time.sleep(3)
-        my_motor.destroy()
-    except KeyboardInterrupt:
-        my_motor.destroy()
+    #To controle with the keyboard
+
+    stdscr.nodelay(True)
+    while True:
+        c = stdscr.getch()
+        if c == ord('z'):
+            print("You pressed 'q'")
+            break
+        # Your existing code here
+        time.sleep(0.1)
+
+
+    curses.wrapper(main)
+
+    #To test forward and backward
+
+    # my_motor = DC_Motor()
+    # try:
+    #     for i in range(10):
+    #         my_motor.control(1, 100)
+    #
+    #         print("Forward")
+    #         time.sleep(3)
+    #         my_motor.control(-1, 100)
+    #         print("Backward")
+    #         time.sleep(3)
+    #     my_motor.destroy()
+    # except KeyboardInterrupt:
+    #     my_motor.destroy()
 
