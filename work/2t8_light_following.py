@@ -74,22 +74,26 @@ class LightFollowingModule:
 
 
 if __name__ == "__main__":
-    sensor = LightFollowingModule(ch_left=0, ch_right=1, threshold=10)
-    print("Suivi de lumiere — deux capteurs (Ctrl+C pour arreter)\n")
-    print(f"{'Canal gauche':>14}  {'Canal droit':>11}  Direction")
-    print("-" * 42)
+    adc = ADS7830()
+    print("Scan de tous les canaux ADS7830 — bougez la lumiere pour voir lesquels reagissent")
+    print("(les canaux non branches donnent une valeur fixe ~84)")
+    print("Ctrl+C pour arreter\n")
+
+    header = "  ".join(f"CH{i:>1}" for i in range(8))
+    print(f"  {header}")
+    print("-" * 44)
 
     try:
         while True:
             try:
-                r = sensor.read()
-                print(f"Gauche : {r.left:>3}    Droite : {r.right:>3}    {r.direction:<6}", end="\r")
+                vals = [adc.analogRead(i) for i in range(8)]
+                row  = "  ".join(f"{v:>3}" for v in vals)
+                print(f"  {row}", end="\r")
             except OSError as e:
                 print(f"\n[I2C] ADS7830 inaccessible (0x48) : {e}")
-                print("Verifiez le branchement du capteur sur le bus I2C.")
                 time.sleep(0.5)
             time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print("\n\nProgramme interrompu.")
+        print("\n\nCanaux trouves -> mettez a jour ch_left et ch_right dans LightFollowingModule()")
         print("Programme developpe par l'Equipe C - MasterCamp SE 2026.")
