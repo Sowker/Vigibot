@@ -262,12 +262,12 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args.debug:
-        logger.get_logger("CTRL").setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
 
-    logger = logger.get_logger("MAIN")
-    logger.info("╔══════════════════════════════════════════════╗")
-    logger.info("║  Robot Line Follower — Team C — SE 2026      ║")
-    logger.info("╚══════════════════════════════════════════════╝")
+    log = logger.get_logger("MAIN")
+    log.info("╔══════════════════════════════════════════════╗")
+    log.info("║  Robot Line Follower — Team C — SE 2026      ║")
+    log.info("╚══════════════════════════════════════════════╝")
 
     robot = Robot(args)
     robot.init()
@@ -280,16 +280,16 @@ if __name__ == "__main__":
 
     for t in threads:
         t.start()
-        logger.info("Thread %-4s démarré (ident: %s)", t.name, t.ident)
+        log.info("Thread %-4s démarré (ident: %s)", t.name, t.ident)
 
-    logger.info("Tous les threads actifs. Appuyez sur Ctrl+C pour arrêter.\n")
+    log.info("Tous les threads actifs. Appuyez sur Ctrl+C pour arrêter.\n")
 
     try:
         while True:
             time.sleep(0.5)
 
     except KeyboardInterrupt:
-        logger.info("Ctrl+C reçu — arrêt en cours…")
+        log.info("Ctrl+C reçu — arrêt en cours…")
 
     finally:
         with robot.state.lock:
@@ -298,9 +298,9 @@ if __name__ == "__main__":
         for t in threads:
             t.join(timeout=3.0)
             if t.is_alive():
-                logger.warning("Thread %s ne s'est pas arrêté dans le délai", t.name)
+                log.warning("Thread %s ne s'est pas arrêté dans le délai", t.name)
 
         robot.shutdown()
 
-    logger.info("Programme terminé. Au revoir !")
-    logger.info("Program developed by Team C — MasterCamp SE 2026.")
+    log.info("Programme terminé. Au revoir !")
+    log.info("Program developed by Team C — MasterCamp SE 2026.")
