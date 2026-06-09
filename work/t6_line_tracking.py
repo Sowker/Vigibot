@@ -1,3 +1,5 @@
+import argparse
+import time
 from enum import IntEnum
 from gpiozero import InputDevice
 
@@ -21,7 +23,7 @@ PIN_LINE_MIDDLE        = 27
 PIN_LINE_RIGHT         = 17
 
 # ═══════════════════════════════════════════════════════════════════
-#  HARDWARE — CAPTEURS DE LIGNE
+#  MATÉRIEL — CAPTEURS DE LIGNE
 # ═══════════════════════════════════════════════════════════════════
 
 class LineTracker:
@@ -69,3 +71,61 @@ class LineTracker:
         """Traduit les 3 valeurs binaires en une action de conduite."""
         pattern = (left, middle, right)
         return LineTracker.TRUTH_TABLE.get(pattern, LineAction.LINE_LOST)
+
+
+def parse_arguments() -> argparse.Namespace:
+    """Gère l'analyse des arguments de la ligne de commande pour le suivi de ligne.
+
+    Retourne:
+        argparse.Namespace: Les arguments de la ligne de commande analysés.
+    """
+    parser = argparse.ArgumentParser(
+        description="Script d'automatisation du suivi de ligne pour barrette de capteurs infrarouges (0 = Ligne noire)."
+    )
+    parser.add_argument('--left', type=int, default=22, help="Broche GPIO pour le capteur Gauche (par défaut : 22)")
+    parser.add_argument('--middle', type=int, default=27, help="Broche GPIO pour le capteur Milieu (par défaut : 27)")
+    parser.add_argument('--right', type=int, default=17, help="Broche GPIO pour le capteur Droit (par défaut : 17)")
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_arguments()
+    line_tracking = LineTracker(pin_left=args.left, pin_middle=args.middle, pin_right=args.right)
+
+    print("Démarrage du système de suivi de ligne... Appuyez sur Ctrl+C pour arrêter.\n")
+
+    try:
+        while True:
+            status_left, status_middle, status_right = line_tracking.read()
+
+            # Détermination de l'action basée sur les lectures des capteurs
+            if status_left == 1 and status_middle == 0 and status_right == 1:
+                action = "Tout droit"
+
+            elif status_left == 0 and status_middle == 1 and status_right == 1:
+                action = "Tourner à gauche ←"
+
+            elif status_left == 1 and status_middle == 1 and status_right == 0:
+                action = "Tourner à droite →"
+
+            elif status_left == 0 and status_middle == 0 and status_right == 1:
+                action = "Légèrement à gauche (Gauche + Milieu)"
+
+            elif status_left == 1 and status_middle == 0 and status_right == 0:
+                action = "Légèrement à droite (Milieu + Droite)"
+
+            elif status_left == 0 and status_middle == 0 and status_right == 0:
+                action = "Intersection / Croisement"
+
+            else:
+                action = "En attente de la ligne / Perdu..."
+
+            # Affichage des données brutes et de l'action sur une seule ligne
+            raw_data = f"(G:{status_left} M:{status_middle} D:{status_right})"
+            print(f"{raw_data:<14} -> {action}")
+
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        print("\nProgramme interrompu. Au revoir !")
+        print("Programme développé par l'Équipe C - MasterCamp SE 2026.")
