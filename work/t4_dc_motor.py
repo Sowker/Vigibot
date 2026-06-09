@@ -113,20 +113,20 @@ if __name__ == '__main__':
     motor = DCMotor(pca)
     try:
         for i in range(10):
-            motor.drive(Direction.FORWARD, 100)
+            motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
             print("Forward")
             time.sleep(3)
-            motor.drive(Direction.BACKWARD, 100)
+            motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT)
             print("Backward")
             time.sleep(3)
 
-            motor.drive(Direction.FORWARD, 100)
+            motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
             print("Forward then stop")
             time.sleep(2)
             motor.stop()
             time.sleep(2)
 
-            motor.drive(Direction.BACKWARD, 100)
+            motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT)
             print("Backward then stop")
             time.sleep(2)
             motor.stop()
