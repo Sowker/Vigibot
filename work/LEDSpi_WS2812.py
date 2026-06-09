@@ -220,7 +220,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
 
 
     def breathProcessing(self):
-        while self.lightMode == 'breath':
+        if self.lightMode == 'breath':
             for i in range(0,self.breathSteps):
                 if self.lightMode != 'breath':
                     break
@@ -234,7 +234,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
                 #self.show()
                 time.sleep(0.03)
     def policeProcessing(self):
-        while self.lightMode == 'police':
+        if self.lightMode == 'police':
             for i in range(0,3):
                 self.set_all_led_color_data(0,0,255)
                 self.show()
@@ -243,7 +243,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
                 self.show()
                 time.sleep(0.05)
             if self.lightMode != 'police':
-                break
+                pass
             time.sleep(0.1)
             for i in range(0,3):
                 self.set_all_led_color_data(255,0,0)
@@ -301,7 +301,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.pause()
 
     def clignotantProcessing(self):
-        while self.lightMode == 'clignotant':
+        if self.lightMode == 'clignotant':
             self.set_all_led_color(0, 0, 0)
 
             if self.sense == "L":
@@ -335,7 +335,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.pause()
 
     def warningProcessing(self):
-        while self.lightMode == 'warning':
+        if self.lightMode == 'warning':
             self.set_all_led_color(0, 0, 0)
 
             for i in range(self.led_count):

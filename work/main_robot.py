@@ -33,6 +33,8 @@ from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, S
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 
+from LEDSpi_WS2812 import Adeept_SPI_LedPixel
+
 # ═══════════════════════════════════════════════════════════════════
 #  CONSTANTES DE CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════
@@ -91,6 +93,8 @@ class Robot:
 
         self.state = RobotState()
         self._obstacle_threshold_mm = cfg.obstacle_mm
+
+        self.led = Adeept_SPI_LedPixel()
 
     def init(self) -> None:
         self._log.info("══ Mise à zéro initiale ══")
@@ -151,6 +155,31 @@ def thread_line(robot: Robot, interval: float) -> None:
 
         with robot.state.lock:
             robot.state.line_action = current_action
+
+        time.sleep(interval)
+
+    log.info("Thread arrêté")
+
+def thread_LED(robot: Robot, interval: float):
+    log = logger.get_logger("LED")
+    log.info("Thread démarré (intervalle=%.3f s)", interval)
+    action = None
+    while True:
+        with robot.state.lock:
+
+            if not robot.state.running:
+                break
+            action = robot.state.line_action
+            if action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
+                robot.led.clignotant_gauche()
+            elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
+                robot.led.clignotant_droit()
+            elif action == LineAction.LINE_LOST:
+                robot.led.warning()
+            elif action == LineAction.STRAIGHT:
+                robot.led.arreter_clignotants()
+                robot.led.arreter_warning()
+
 
         time.sleep(interval)
 
@@ -275,6 +304,7 @@ if __name__ == "__main__":
     threads = [
         threading.Thread(target=thread_ultrasonic, args=(robot, args.sensor_interval), name="US", daemon=True),
         threading.Thread(target=thread_line, args=(robot, args.sensor_interval), name="LINE", daemon=True),
+        threading.Thread(targer=thread_LED, args=(robot, args.sensor_interval), name="LED", daemon=True),
         threading.Thread(target=thread_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
     ]
 
