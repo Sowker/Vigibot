@@ -12,7 +12,9 @@
 # ═══════════════════════════════════════════════════════════════════
 #  IMPORTS
 # ═══════════════════════════════════════════════════════════════════
-import keyboard
+import sys
+import select
+from typing import Dict
 import time
 import threading
 import argparse
@@ -114,13 +116,24 @@ def thread_controller(robot: Robot, interval: float) -> None:
     """
     Boucle de décision : lit l'action synthétisée, décide et pilote les moteurs.
     """
-    log  = logger.get_logger("CTRL")
+    log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
-    keys_state = {'z': False, 'q': False, 's':False, 'd':False, # z q s d to control the direction
-                  'o': False, 'l': False, # o l to control the head up and down
-                  }
+    keys_state: Dict[str, bool] = {
+        'z': False, 'q': False, 's': False, 'd': False,  # z q s d to control the direction
+        'o': False, 'l': False,  # o l to control the head up and down
+    }
     vertical_angle = 0
+
+    # For non-blocking stdin reading
+    def is_pressed(key: str) -> bool:
+        # This is a simplified approach; for a full solution, you may need a more robust key state tracker
+        # or a library like `curses` (Unix) or `msvcrt` (Windows)
+        # Here, we assume you press a key and it is read from stdin
+        if select.select([sys.stdin], [], [], 0)[0]:
+            char = sys.stdin.read(1)
+            return char.lower() == key.lower()
+        return False
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -137,34 +150,43 @@ def thread_controller(robot: Robot, interval: float) -> None:
             time.sleep(interval)
             continue
 
+        # Check for key state changes
+        new_z = is_pressed('z')
+        new_q = is_pressed('q')
+        new_s = is_pressed('s')
+        new_d = is_pressed('d')
+        new_o = is_pressed('o')
+        new_l = is_pressed('l')
+
         # s'il y a un changement de touche pour avancer ou reculer on stop le robot
-        if keyboard.is_pressed('z') != keys_state['z'] or keyboard.is_pressed('s') != keys_state['s']:
+        if new_z != keys_state['z'] or new_s != keys_state['s']:
             robot.motor.stop()
         # s'il y a un changement de touche pour tourner à droite ou à gauche on mets les roues au centre
-        if keyboard.is_pressed('q') != keys_state['q'] or keyboard.is_pressed('d') != keys_state['d']:
+        if new_q != keys_state['q'] or new_d != keys_state['d']:
             robot.head.steer_center()
         # s'il y a un changement de touche pour la tête haut/bas on la met au centre sur cet axe
-        if keyboard.is_pressed('o') != keys_state['o'] or keyboard.is_pressed('l') != keys_state['l']:
+        if new_o != keys_state['o'] or new_l != keys_state['l']:
             robot.head.set_angle_motor(CHANNEL_SERVO_VERTICAL, 0)
 
-        # mise à jour des états de touches préssées
-        keys_state = {'z': keyboard.is_pressed('z'), 'q': keyboard.is_pressed('q'), 's': keyboard.is_pressed('s'), 'd': keyboard.is_pressed('d'),  # z q s d to control the direction
-                      'o': keyboard.is_pressed('o'), 'l': keyboard.is_pressed('l')  # o k l m to control the head
+        # mise à jour des états de touches pressées
+        keys_state = {
+            'z': new_z, 'q': new_q, 's': new_s, 'd': new_d,
+            'o': new_o, 'l': new_l
         }
 
-        if keyboard.is_pressed('z') and not keys_state['z']:
+        if new_z and not keys_state['z']:
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        elif keyboard.is_pressed('s') and not keys_state['s']:
+        elif new_s and not keys_state['s']:
             robot.motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT)
 
-        if keyboard.is_pressed('q') and not keys_state['q']:
+        if new_q and not keys_state['q']:
             robot.head.steer_right(STEER_HARD_DEG)
-        elif keyboard.is_pressed('d') and not keys_state['d']:
+        elif new_d and not keys_state['d']:
             robot.head.steer_left(STEER_HARD_DEG)
 
-        if keyboard.is_pressed('o') and not keys_state['o']:
+        if new_o and not keys_state['o']:
             vertical_angle += 5
-        elif keyboard.is_pressed('l') and not keys_state['l']:
+        elif new_l and not keys_state['l']:
             vertical_angle -= 5
 
         robot.head.set_angle_motor(CHANNEL_SERVO_VERTICAL, vertical_angle)
@@ -175,7 +197,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
     robot.motor.stop()
     robot.head.steer_center()
     log.info("Thread arrêté")
-
 
 # ═══════════════════════════════════════════════════════════════════
 #  ARGUMENTS CLI
