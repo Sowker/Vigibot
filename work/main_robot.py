@@ -33,7 +33,7 @@ from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, S
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 
-from LEDSpi_WS2812 import Adeept_SPI_LedPixel
+from t2_back_led import Adeept_SPI_LedPixel
 
 # ═══════════════════════════════════════════════════════════════════
 #  CONSTANTES DE CONFIGURATION
