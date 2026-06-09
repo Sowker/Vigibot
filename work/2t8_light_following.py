@@ -117,14 +117,8 @@ if __name__ == "__main__":
         while True:
             try:
                 r = sensor.scan(set_angle_fn=lambda a: setattr(head_servo, "angle", a))
+                head_servo.angle = 90   # retour centre apres chaque scan
                 print(f"{r.left:>8}  {r.right:>8}  {r.direction:<6}", end="\r")
-                # retour vers le cote le plus lumineux
-                if r.direction == "LEFT":
-                    head_servo.angle = sensor.left_angle
-                elif r.direction == "RIGHT":
-                    head_servo.angle = sensor.right_angle
-                else:
-                    head_servo.angle = 90
                 time.sleep(0.3)
             except OSError as e:
                 print(f"\n[I2C] ADS7830 inaccessible (0x48) : {e}")
