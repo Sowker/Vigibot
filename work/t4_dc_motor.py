@@ -3,6 +3,8 @@ from adafruit_pca9685 import PCA9685
 from adafruit_motor import motor
 import time
 from typing import Optional
+from board import SCL, SDA
+import busio
 
 import logger as log
 
@@ -99,3 +101,36 @@ class DCMotor:
             self.stop()
         else:
             self._ramp(speed_pct)
+
+print("test")
+if __name__ == '__main__':
+    print("yep")
+    # test automatique, avancé reculé et arrêt, le tout en douceur
+    # Pour le contrôle avec le clavier, voir le fichier keyboard_control.py
+    i2c = busio.I2C(SCL, SDA)
+    PCA_ADDRESS = 0x5F
+    pca = PCA9685(i2c, address=PCA_ADDRESS)
+    motor = DCMotor(pca)
+    try:
+        for i in range(10):
+            motor.drive(Direction.FORWARD, 100)
+            print("Forward")
+            time.sleep(3)
+            motor.drive(Direction.BACKWARD, 100)
+            print("Backward")
+            time.sleep(3)
+
+            motor.drive(Direction.FORWARD, 100)
+            print("Forward then stop")
+            time.sleep(2)
+            motor.stop()
+            time.sleep(2)
+
+            motor.drive(Direction.BACKWARD, 100)
+            print("Backward then stop")
+            time.sleep(2)
+            motor.stop()
+            time.sleep(2)
+        motor.stop()
+    except KeyboardInterrupt:
+        motor.stop()

@@ -39,7 +39,7 @@ class DC_Motor():
 
     def destroy(self):
         self.motorStop()
-        pwm_motor.deinit()
+        self.pwm_motor.deinit()
 
     def _power(self, direction, motor_speed):
         '''
@@ -85,7 +85,7 @@ class DC_Motor():
             self.motorStop()
         self.actual_direction = direction
         if slow == 1:
-            _power(self.actual_direction, 25)
+            self._power(self.actual_direction, 25)
         # else ramp
         else:
             if duration < 1:
