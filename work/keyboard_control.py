@@ -31,10 +31,9 @@ from adafruit_pca9685 import PCA9685
 import logging
 import logger
 
-from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG
+from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG, CHANNEL_SERVO_VERTICAL
 from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
-from work.t3_servomotors import CHANNEL_SERVO_VERTICAL
 
 # ═══════════════════════════════════════════════════════════════════
 #  CONSTANTES DE CONFIGURATION
