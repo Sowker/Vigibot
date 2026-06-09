@@ -295,6 +295,10 @@ class Adeept_SPI_LedPixel(threading.Thread):
     def clignotant_droit(self):
         self.clignotant("R")
 
+    def warning(self):
+        self.clignotant("R")
+        self.clignotant("L")
+
     def arreter_clignotants(self):
         self.pause()
 
@@ -340,15 +344,11 @@ if __name__ == '__main__':
             led.set_led_count(14)
             led.set_all_led_color(0, 0, 0)
             time.sleep(0.2)
-            for i in range(0,5):
-                led.clignotant_gauche()
-                time.sleep(2)
-                led.arreter_clignotants()
-                time.sleep(1)
-                led.clignotant_droits()
-                time.sleep(2)
-                led.arreter_clignotants()
-                time.sleep(1)
+
+            led.warning()
+            time.sleep(5)
+            led.arreter_clignotants()
+            time.sleep(1)
 
         else:
             print("SPI not initialized")
