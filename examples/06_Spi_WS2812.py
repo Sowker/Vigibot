@@ -58,6 +58,11 @@ class Adeept_SPI_LedPixel(threading.Thread):
     def led_close(self):
         self.set_all_led_rgb([0,0,0])
         self.spi.close()
+
+    def pause(self):
+        self.lightMode = 'none'
+        self.set_all_led_color(0, 0, 0)
+        self.__flag.clear()
     
     def set_led_count(self, count):
         self.led_count = count
@@ -284,18 +289,35 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.sense = sense
         self.resume()
 
+    def clignotant_gauche(self):
+        self.clignotant("L")
+
+    def clignotant_droit(self):
+        self.clignotant("R")
+
+    def arreter_clignotants(self):
+        self.pause()
+
     def clignotantProcessing(self):
         while self.lightMode == 'clignotant':
             self.set_all_led_color(0, 0, 0)
 
             if self.sense == "L":
                 for i in range(3):
-                    self.set_led_rgb_data(2 + i, [255, 128, 0])
-                    self.set_led_rgb_data(11 + i, [255, 128, 0])
+                    idx1 = 2 + i
+                    idx2 = 11 + i
+                    if idx1 < self.led_count:
+                        self.set_led_rgb_data(idx1, [255, 128, 0])
+                    if idx2 < self.led_count:
+                        self.set_led_rgb_data(idx2, [255, 128, 0])
             elif self.sense == "R":
                 for i in range(3):
-                    self.set_led_rgb_data(5 + i, [255, 128, 0])
-                    self.set_led_rgb_data(8 + i, [255, 128, 0])
+                    idx1 = 5 + i
+                    idx2 = 8 + i
+                    if idx1 < self.led_count:
+                        self.set_led_rgb_data(idx1, [255, 128, 0])
+                    if idx2 < self.led_count:
+                        self.set_led_rgb_data(idx2, [255, 128, 0])
 
             self.show()
             time.sleep(0.5)
@@ -308,9 +330,6 @@ class Adeept_SPI_LedPixel(threading.Thread):
 if __name__ == '__main__':
     import time
     import os
-    print("spidev version is ", spidev.__version__)
-    print("spidev device as show:")
-    os.system("ls /dev/spi*")
 
     # Create controller for 12 LEDs
     led = Adeept_SPI_LedPixel(14, 255)
@@ -318,14 +337,19 @@ if __name__ == '__main__':
 
     try:
         if led.check_spi_state() != 0:
-            led.set_led_count(12)
+            led.set_led_count(14)
             led.set_all_led_color(0, 0, 0)
             time.sleep(0.2)
+            for i in range(0,5):
+                led.clignotant_gauche()
+                time.sleep(2)
+                led.arreter_clignotants()
+                time.sleep(1)
+                led.clignotant_droits()
+                time.sleep(2)
+                led.arreter_clignotants()
+                time.sleep(1)
 
-            led.police()  # begin police animation (non-blocking)
-            print("Police mode running — CTRL+C to stop")
-            while True:
-                time.sleep(1)  # main thread stays alive (do other work here)
         else:
             print("SPI not initialized")
     except KeyboardInterrupt:
@@ -338,4 +362,3 @@ if __name__ == '__main__':
         except Exception:
             pass
         led.led_close()
-
