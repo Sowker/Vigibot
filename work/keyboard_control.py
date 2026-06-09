@@ -151,11 +151,17 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
         # Check for key state changes
         new_z = is_pressed('z')
+        if new_z:print("z is pressed", new_z)
         new_q = is_pressed('q')
+        if new_q:print("q is pressed", new_q)
         new_s = is_pressed('s')
+        if new_s:print("s is pressed", new_s)
         new_d = is_pressed('d')
+        if new_d:print("d is pressed", new_d)
         new_o = is_pressed('o')
+        if new_o: print("o is pressed")
         new_l = is_pressed('l')
+        if new_l: print("l is pressed")
 
         # s'il y a un changement de touche pour avancer ou reculer on stop le robot
         if new_z != keys_state['z'] or new_s != keys_state['s']:
