@@ -19,6 +19,7 @@ class Adeept_SPI_LedPixel(threading.Thread):
         super(Adeept_SPI_LedPixel, self).__init__(*args, **kwargs)
         self.__flag = threading.Event()
         self.__flag.clear()
+        self._running = True
     def led_begin(self, bus = 0, device = 0):
         self.bus = bus
         self.device = device
@@ -56,8 +57,10 @@ class Adeept_SPI_LedPixel(threading.Thread):
             print("SPI6-MOSI: GPIO20(WS2812-PIN)  SPI6-MISO: GPIO19  SPI6-SCLK: GPIO21  SPI6-CE0: GPIO18  SPI6-CE1: GPIO27")
     
     def led_close(self):
-        self.set_all_led_rgb([0,0,0])
-        self.spi.close()
+        if self.led_init_state != 0:
+            self.set_all_led_rgb([0,0,0])
+            self.spi.close()
+            self.led_init_state = 0
 
     def pause(self):
         self.lightMode = 'none'
@@ -218,6 +221,11 @@ class Adeept_SPI_LedPixel(threading.Thread):
     def resume(self):
         self.__flag.set()
 
+    def stop(self):
+        self._running = False
+        self.lightMode = 'none'
+        self.__flag.set()
+
 
     def breathProcessing(self):
         if self.lightMode == 'breath':
@@ -268,8 +276,10 @@ class Adeept_SPI_LedPixel(threading.Thread):
             self.warningProcessing()
     
     def run(self):
-        while 1:
+        while self._running:
             self.__flag.wait()
+            if not self._running:
+                break
             self.lightChange()
             pass
 
@@ -292,10 +302,10 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.resume()
 
     def clignotant_gauche(self):
-        self.clignotant("L")
+        self.clignotant("R")
 
     def clignotant_droit(self):
-        self.clignotant("R")
+        self.clignotant("L")
 
     def arreter_clignotants(self):
         self.pause()

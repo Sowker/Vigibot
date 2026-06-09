@@ -110,6 +110,9 @@ class Robot:
         self.motor.reset()
         self.head.shutdown()
         time.sleep(0.5)
+        if self.led.is_alive():
+            self.led.stop()
+            self.led.join(timeout=2.0)
         self.led.led_close()
         self._pca.deinit()
         self._log.info("PCA9685 désactivé. Bonne journée !")
@@ -174,16 +177,12 @@ def thread_LED(robot: Robot, interval: float):
                 break
             action = robot.state.line_action
             if action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
-                print("gôche")
                 robot.led.clignotant_gauche()
             elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
-                print("droate")
                 robot.led.clignotant_droit()
             elif action == LineAction.LINE_LOST:
-                print("AAAAAAAHH")
                 robot.led.warning()
             elif action == LineAction.STRAIGHT:
-                print("opposite gay")
                 robot.led.arreter_clignotants()
                 robot.led.arreter_warning()
 
