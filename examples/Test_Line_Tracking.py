@@ -20,10 +20,14 @@ pca.frequency = 50
 HEAD_CHANNEL   = 1
 HEAD_MIN_PULSE = 500
 HEAD_MAX_PULSE = 2400
-HEAD_LEFT      = 130
-HEAD_CENTER    = 90
-HEAD_RIGHT     = 50
+HEAD_LEFT       = 130
+HEAD_CENTER     = 90
+HEAD_RIGHT      = 50
 HEAD_STEP_DELAY = 0.01   # secondes entre chaque degre pour le retour centre
+# Marge anti-tremblement : la tete ne bouge que si le meme angle est demande
+# HEAD_CONFIRM fois de suite. Augmenter si la tete tremble encore.
+HEAD_CONFIRM    = 2
+_head_pending   = [HEAD_CENTER, 0]   # [angle_demande, compteur_consecutif]
 
 head_servo = adafruit_servo.Servo(
     pca.channels[HEAD_CHANNEL],
@@ -35,8 +39,13 @@ head_servo.angle = HEAD_CENTER
 
 # --- Moteurs DC (canaux repris de move.py) ---
 # M1 gauche / M2 droit (M2 monte en sens inverse -> throttle negatif = avant)
-DRIVE    = 0.30   # throttle avant (0.0 - 1.0)
-TURN_IN  = 0.08   # throttle roue interieure en virage
+DRIVE           = 0.30   # vitesse tout droit (les deux cotes egaux)
+TURN_IN         = 0.08   # roue interieure en virage
+# Roue exterieure par sens de virage — ajuster si un cote tourne plus vite :
+#   droite trop rapide -> baisser TURN_OUT_RIGHT
+#   gauche trop rapide -> baisser TURN_OUT_LEFT
+TURN_OUT_RIGHT  = 0.26   # roue gauche (exterieure) lors d'un virage droite
+TURN_OUT_LEFT   = 0.30   # roue droite (exterieure) lors d'un virage gauche
 
 motor1 = adafruit_motor.DCMotor(pca.channels[15], pca.channels[14])
 motor1.decay_mode = adafruit_motor.SLOW_DECAY
@@ -100,8 +109,15 @@ led_right_g = PWMOutputDevice(5,  active_high=False)
 # --------------------------------------------------------------------------
 
 def head_set(angle):
-    """Positionne la tete directement (PCA9685 unique = pas de tremblement)."""
-    head_servo.angle = max(10, min(170, int(angle)))
+    """Bouge la tete seulement si le meme angle est demande HEAD_CONFIRM fois de suite."""
+    global _head_pending
+    angle = max(10, min(170, int(angle)))
+    if _head_pending[0] == angle:
+        _head_pending[1] += 1
+    else:
+        _head_pending = [angle, 1]
+    if _head_pending[1] >= HEAD_CONFIRM:
+        head_servo.angle = angle
 
 
 def head_center():
@@ -137,18 +153,16 @@ def drive_straight():
 
 
 def drive_left():
-    """Roue gauche ralentie, roue droite pleine vitesse."""
     motor1.throttle =  TURN_IN
-    motor2.throttle = -DRIVE
+    motor2.throttle = -TURN_OUT_LEFT
     motor3.throttle =  TURN_IN
-    motor4.throttle = -DRIVE
+    motor4.throttle = -TURN_OUT_LEFT
 
 
 def drive_right():
-    """Roue droite ralentie, roue gauche pleine vitesse."""
-    motor1.throttle =  DRIVE
+    motor1.throttle =  TURN_OUT_RIGHT
     motor2.throttle = -TURN_IN
-    motor3.throttle =  DRIVE
+    motor3.throttle =  TURN_OUT_RIGHT
     motor4.throttle = -TURN_IN
 
 
