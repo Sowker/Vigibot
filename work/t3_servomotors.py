@@ -1,14 +1,20 @@
 import time
 from adafruit_motor import servo as adafruit_servo
 from adafruit_pca9685 import PCA9685
+from board import SCL, SDA
+import busio
 
 import logger as log
 
 # ── constantes ─────────────────────────────────────────────────────────
-SERVO_MIN_PULSE_US  = 500    # µs — impulsion minimale
-SERVO_MAX_PULSE_US  = 2400   # µs — impulsion maximale
-SERVO_RANGE_DEG     = 180    # degrés d'actuation totale
-SERVO_INIT_DELAY_S  = 0.3    # délai après positionnement initial
+SERVO_MIN_PULSE_US  = 500                # µs — impulsion minimale
+SERVO_MAX_PULSE_US  = 2400               # µs — impulsion maximale
+SERVO_RANGE_DEG     = 180                # degrés d'actuation totale
+SERVO_INIT_DELAY_S  = 0.3                # délai après positionnement initial
+I2C = busio.I2C(SCL, SDA)
+SERVO_PCA = PCA9685(I2C, address=0x5f)   # default address 0x40
+SERVO_PCA.frequency = 50                 #
+
 
 # Limites angulaires (mécaniques)
 WHEEL_ANGLE_MIN     = 45     # degrés — braquage gauche max
@@ -140,11 +146,39 @@ class Head:
     def steer_center(self) -> None:
         self.steer(WHEEL_ANGLE_CENTER)
 
+    def set_angle_motor(self, channel_sevro : int, angle: float) -> None:
+        match channel_sevro:
+            case 0:
+                wheel_angle = max(WHEEL_ANGLE_MIN, min(WHEEL_ANGLE_MAX, angle))
+                self.wheel.set_angle(wheel_angle)
+            case 1:
+                head_angle = max(HEAD_ANGLE_MIN, min(HEAD_ANGLE_MAX, angle))
+                self.horizontal.set_angle(head_angle)
+            case 2:
+                head_angle = max(HEAD_ANGLE_MIN, min(HEAD_ANGLE_MAX, angle))
+                self.vertical.set_angle(head_angle)
+            case _:
+                self._log.debug("servoID -> Not existing : servoID=%d", channel_sevro)
+
     def reset(self) -> None:
         self.wheel.reset()
         self.horizontal.reset()
         self.vertical.reset()
         self._log.info("Reset → tous les servos au centre")
+
+    def test(self) -> None:
+        self._log.info("Test — test les servos dans differentes positions défini")
+        self.set_angle_motor(1, 50)
+        self.set_angle_motor(2, 50)
+        self.set_angle_motor(0, 35)
+        time.sleep(0.5)
+        self.reset()
+        time.sleep(0.5)
+        self.set_angle_motor(1, 140)
+        self.set_angle_motor(2, 140)
+        self.set_angle_motor(0, 125)
+        time.sleep(0.5)
+        self._log.info("Test — test fini !")
 
     def shutdown(self) -> None:
         self._log.info("Shutdown — recentrage des servos…")
@@ -152,3 +186,14 @@ class Head:
         self.vertical.center()
         self.wheel.center()
         self.reset()
+
+if __name__ == "__main__":
+
+    head = Head(SERVO_PCA)
+    try:
+        head.test()
+        head.shutdown()
+    except KeyboardInterrupt:
+        head.shutdown()
+        print("\nProgram terminated. Goodbye!")
+        print("Program developed by Team C - MasterCamp SE 2026.")
