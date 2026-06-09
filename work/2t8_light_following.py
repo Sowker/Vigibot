@@ -4,18 +4,14 @@ from collections import namedtuple
 
 LightReading = namedtuple("LightReading", ["left", "right", "direction"])
 """
-left      : int 0-255, valeur ADC capteur gauche (canal ch_left)
-right     : int 0-255, valeur ADC capteur droit  (canal ch_right)
+left      : int 0-255  valeur ADC capteur quand la tete pointe a gauche
+right     : int 0-255  valeur ADC capteur quand la tete pointe a droite
 direction : "LEFT" | "RIGHT" | "CENTER"
 """
 
 
 class ADS7830:
-    """
-    Convertisseur Analogique-Numerique ADS7830 via I2C.
-    8 canaux disponibles (0-7), resolution 8 bits (0-255).
-    Adresse I2C par defaut : 0x48.
-    """
+    """ADC ADS7830 via I2C — 8 canaux, resolution 8 bits (0-255)."""
 
     def __init__(self, address: int = 0x48):
         self.cmd     = 0x84
@@ -23,7 +19,6 @@ class ADS7830:
         self.address = address
 
     def analogRead(self, chn: int) -> int:
-        """Lit la valeur ADC du canal chn (0-7). Retourne 0-255."""
         return self.bus.read_byte_data(
             self.address,
             self.cmd | (((chn << 2 | chn >> 1) & 0x07) << 4),
@@ -32,35 +27,57 @@ class ADS7830:
 
 class LightFollowingModule:
     """
-    Module de suivi de lumiere a deux capteurs (gauche + droite).
+    Suivi de lumiere a capteur unique (canal ADC) monte sur un servo.
+
+    Principe : on tourne la tete a gauche, on lit la lumiere, on tourne a
+    droite, on relit. Les deux lectures donnent "exposition gauche" et
+    "exposition droite". La direction est la plus lumineuse des deux.
 
     Utilisation depuis un autre fichier :
         from work.t8_light_following import LightFollowingModule
-        sensor = LightFollowingModule()
-        reading = sensor.read()          # LightReading(left, right, direction)
+        sensor = LightFollowingModule(channel=1, threshold=15)
+        reading = sensor.scan(set_angle_fn=head.set_angle)
         print(reading.left, reading.right, reading.direction)
 
     Parametres
     ----------
-    ch_left    : canal ADC du capteur gauche  (defaut 0)
-    ch_right   : canal ADC du capteur droit   (defaut 1)
-    threshold  : ecart minimal entre les deux valeurs pour decider
-                 LEFT ou RIGHT (evite les oscillations sur seuil)  (defaut 10)
+    channel    : canal ADC du capteur (defaut 1)
+    threshold  : ecart minimal entre left et right pour decider LEFT/RIGHT
+    left_angle : angle servo pour pointer a gauche  (defaut 130)
+    right_angle: angle servo pour pointer a droite  (defaut 50)
+    settle     : secondes a attendre apres avoir tourne (defaut 0.08)
     """
 
-    def __init__(self, ch_left: int = 0, ch_right: int = 1, threshold: int = 10):
-        self.adc       = ADS7830()
-        self.ch_left   = ch_left
-        self.ch_right  = ch_right
-        self.threshold = threshold
+    def __init__(
+        self,
+        channel: int     = 1,
+        threshold: int   = 15,
+        left_angle: int  = 130,
+        right_angle: int = 50,
+        settle: float    = 0.08,
+    ):
+        self.adc         = ADS7830()
+        self.channel     = channel
+        self.threshold   = threshold
+        self.left_angle  = left_angle
+        self.right_angle = right_angle
+        self.settle      = settle
 
-    def read(self) -> LightReading:
+    def scan(self, set_angle_fn) -> LightReading:
         """
-        Lit les deux capteurs et retourne un LightReading.
-        Peut lever OSError si le module I2C n'est pas connecte.
+        Oriente la tete gauche puis droite, lit le capteur a chaque position.
+
+        set_angle_fn : callable(angle: int) — ex: head.set_angle
+        Retourne LightReading(left, right, direction).
+        Peut lever OSError si l'ADS7830 n'est pas accessible en I2C.
         """
-        left  = self.adc.analogRead(self.ch_left)
-        right = self.adc.analogRead(self.ch_right)
+        set_angle_fn(self.left_angle)
+        time.sleep(self.settle)
+        left = self.adc.analogRead(self.channel)
+
+        set_angle_fn(self.right_angle)
+        time.sleep(self.settle)
+        right = self.adc.analogRead(self.channel)
 
         diff = left - right
         if diff > self.threshold:
@@ -73,27 +90,49 @@ class LightFollowingModule:
         return LightReading(left=left, right=right, direction=direction)
 
 
+# ---------------------------------------------------------------------------
+# Test autonome — cree son propre PCA9685 uniquement ici
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    adc = ADS7830()
-    print("Scan de tous les canaux ADS7830 — bougez la lumiere pour voir lesquels reagissent")
-    print("(les canaux non branches donnent une valeur fixe ~84)")
-    print("Ctrl+C pour arreter\n")
+    from board import SCL, SDA
+    import busio
+    from adafruit_pca9685 import PCA9685
+    from adafruit_motor import servo as adafruit_servo
 
-    header = "  ".join(f"CH{i:>1}" for i in range(8))
-    print(f"  {header}")
-    print("-" * 44)
+    i2c = busio.I2C(SCL, SDA)
+    pca = PCA9685(i2c, address=0x5f)
+    pca.frequency = 50
+    head_servo = adafruit_servo.Servo(
+        pca.channels[1], min_pulse=500, max_pulse=2400, actuation_range=180
+    )
+    head_servo.angle = 90
+
+    sensor = LightFollowingModule(channel=1, threshold=15)
+
+    print("Scan de lumiere gauche/droite (Ctrl+C pour arreter)\n")
+    print(f"{'Gauche':>8}  {'Droite':>8}  Direction")
+    print("-" * 32)
 
     try:
         while True:
             try:
-                vals = [adc.analogRead(i) for i in range(8)]
-                row  = "  ".join(f"{v:>3}" for v in vals)
-                print(f"  {row}", end="\r")
+                r = sensor.scan(set_angle_fn=lambda a: setattr(head_servo, "angle", a))
+                print(f"{r.left:>8}  {r.right:>8}  {r.direction:<6}", end="\r")
+                # retour vers le cote le plus lumineux
+                if r.direction == "LEFT":
+                    head_servo.angle = sensor.left_angle
+                elif r.direction == "RIGHT":
+                    head_servo.angle = sensor.right_angle
+                else:
+                    head_servo.angle = 90
+                time.sleep(0.3)
             except OSError as e:
                 print(f"\n[I2C] ADS7830 inaccessible (0x48) : {e}")
                 time.sleep(0.5)
-            time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print("\n\nCanaux trouves -> mettez a jour ch_left et ch_right dans LightFollowingModule()")
+        print("\n\nArret — retour au centre.")
+        head_servo.angle = 90
+        time.sleep(0.3)
+        pca.deinit()
         print("Programme developpe par l'Equipe C - MasterCamp SE 2026.")
