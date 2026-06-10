@@ -20,12 +20,11 @@ from dataclasses import dataclass, field
 from board import SCL, SDA
 import busio
 from adafruit_pca9685 import PCA9685
-from gpiozero import TonalBuzzer
 
 import logging
 import logger
 
-import  buzzer_Sirene 
+from buzzer_Sirene import SONG, play
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head
@@ -48,11 +47,6 @@ OBSTACLE_THRESHOLD_MM = 200.0  # Seuil fixé à 20 cm
 LIGHT_CH_LEFT  = 0
 LIGHT_CH_RIGHT = 1
 
-BUZZER_PIN = 18
-BIP_NOTE      = "A5"
-BIP_DURATION_S = 0.15
-BIP_PAUSE_S    = 0.1
-
 PAUSE_AVANT_RECUL_S  = 1.0  # attente avant le recul (point 4)
 RECUL_DUREE_S        = 1.5  # ~30 cm a vitesse reduite (SPEED_SLOW_PCT)
 PAUSE_APRES_RECUL_S  = 2.0  # arret avant reprise du suivi (point 5)
@@ -69,6 +63,7 @@ class RobotState:
     lock: threading.Lock = field(default_factory=threading.Lock)
     running: bool = True
     driving: bool = False
+    emergency_stop: bool = False
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -89,7 +84,6 @@ class Robot:
         self.motor = DCMotor(self._pca)
         self.head = Head(self._pca)
         self.light = LightFollowingModule(ch_left=cfg.light_left, ch_right=cfg.light_right)
-        self.buzzer = TonalBuzzer(BUZZER_PIN)
 
         self.led = Adeept_SPI_LedPixel(14, 255)
 
@@ -117,7 +111,7 @@ class Robot:
             self.led.stop()
             self.led.join(timeout=2.0)
         self.led.led_close()
-        self.buzzer.close()
+        buzzer_Sirene.tb.close()
         time.sleep(0.5)
         self._pca.deinit()
         self._log.info("PCA9685 désactivé. Bonne journée !")
@@ -129,13 +123,6 @@ class Robot:
         else:
             self.led.arreter_warning()
             self.front_leds.cancel_blink()
-
-    def bip_bip(self) -> None:
-        for _ in range(2):
-            self.buzzer.play(BIP_NOTE)
-            time.sleep(BIP_DURATION_S)
-            self.buzzer.stop()
-            time.sleep(BIP_PAUSE_S)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -149,12 +136,9 @@ def handle_obstacle(robot: Robot, log: logging.Logger) -> None:
 
     time.sleep(PAUSE_AVANT_RECUL_S)
 
-    log.info("Recul ~30 cm à vitesse réduite + Bip Bip")
+    log.info("Recul ~30 cm à vitesse réduite + Bip Bip (sirène)")
     robot.motor.drive(Direction.BACKWARD, SPEED_SLOW_PCT, slow=True)
-    robot.bip_bip()
-    reste = RECUL_DUREE_S - 2 * (BIP_DURATION_S + BIP_PAUSE_S)
-    if reste > 0:
-        time.sleep(reste)
+    time.sleep(RECUL_DUREE_S)
     robot.motor.stop()
 
     robot.feux_detresse(False)
@@ -192,9 +176,13 @@ def light_following_loop(robot: Robot, threshold_mm: float) -> None:
                 distance = None
 
             if distance is not None and distance <= threshold_mm:
+                with robot.state.lock:
+                    robot.state.emergency_stop = True
+
                 handle_obstacle(robot, log)
 
                 with robot.state.lock:
+                    robot.state.emergency_stop = False
                     driving = robot.state.driving
 
                 if driving:
@@ -261,14 +249,24 @@ def keyboard_loop(robot: Robot) -> None:
         elif cmd != "":
             print("Commande invalide. Utilisez : M (marche), A/a (arrêt) ou exit")
 
-def buzzer_loop(robot: Robot):
+def buzzer_loop(robot: Robot) -> None:
     log = logger.get_logger("BUZZER")
+    log.info("Thread démarré")
+
     while True:
         with robot.state.lock:
-            if not robot.state.running:
-                break
-            if robot.state.emergency_stop:
-                buzzer_Sirene.play(buzzer_Sirene.SONG)
+            running   = robot.state.running
+            emergency = robot.state.emergency_stop
+
+        if not running:
+            break
+
+        if emergency:
+            play(SONG)
+        else:
+            time.sleep(LOOP_PERIOD_S)
+
+    log.info("Thread arrêté")
 
 
 # ═══════════════════════════════════════════════════════════════════
