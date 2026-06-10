@@ -17,7 +17,7 @@ SERVO_PCA.frequency = 50                 #
 
 
 # Limites angulaires (mécaniques)
-WHEEL_ANGLE_MIN     = 45     # degrés — braquage gauche max
+WHEEL_ANGLE_MIN     = 45    # degrés — braquage gauche max
 WHEEL_ANGLE_CENTER  = 90     # degrés — tout droit
 WHEEL_ANGLE_MAX     = 135    # degrés — braquage droite max
 
@@ -150,7 +150,9 @@ class Head:
         match channel_sevro:
             case 0:
                 wheel_angle = max(WHEEL_ANGLE_MIN, min(WHEEL_ANGLE_MAX, angle))
+                self._log.info("wheel_angle=%d, actual_angle=%d", wheel_angle, self.wheel.angle)
                 self.wheel.set_angle(wheel_angle)
+                self._log.info("wheel_angle=%d, actual_angle=%d", wheel_angle, self.wheel.angle)
             case 1:
                 head_angle = max(HEAD_ANGLE_MIN, min(HEAD_ANGLE_MAX, angle))
                 self.horizontal.set_angle(head_angle)
@@ -180,6 +182,23 @@ class Head:
         time.sleep(0.5)
         self._log.info("Test — test fini !")
 
+    def test_steer(self):
+        self._log.info("Test — test les servos dans differentes positions défini")
+        self.steer_left(40)
+        time.sleep(0.5)
+        self.steer_right(40)
+        time.sleep(0.5)
+        self._log.info("Test — test fini !")
+
+    def get_max_range(self):
+        self._log.info("Test — Pour avoir la max range des roues")
+        self.steer_left(45)
+        time.sleep(0.5)
+        for i in range(90):
+            self.steer_left(self.wheel.angle + 1)
+            self._log.info("Wheel angle :",self.wheel.angle)
+            time.sleep(0.5)
+
     def shutdown(self) -> None:
         self._log.info("Shutdown — recentrage des servos…")
         self.horizontal.center()
@@ -191,7 +210,7 @@ if __name__ == "__main__":
 
     head = Head(SERVO_PCA)
     try:
-        head.test()
+        head.get_max_range()
         head.shutdown()
     except KeyboardInterrupt:
         head.shutdown()
