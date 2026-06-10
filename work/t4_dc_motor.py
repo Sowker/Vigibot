@@ -15,9 +15,9 @@ MOTOR_RAMP_STEPS      = 10   # nombre de pas par seconde de rampe
 CHANNEL_MOTOR_IN1        = 15  # Moteur DC pôle +
 CHANNEL_MOTOR_IN2        = 14  # Moteur DC pôle −
 
-SPEED_NORMAL_PCT      = 20   # % puissance — ligne droite
-SPEED_TURNING_PCT     = 20   # % puissance — virage doux
-SPEED_SLOW_PCT        = 20   # % puissance — virage serré
+SPEED_NORMAL_PCT      = 17   # % puissance — ligne droite
+SPEED_TURNING_PCT     = 17   # % puissance — virage doux
+SPEED_SLOW_PCT        = 17   # % puissance — virage serré
 
 class Direction(IntEnum):
     """Sens de marche du moteur DC."""
@@ -101,7 +101,7 @@ class DCMotor:
             self._ramp(speed_pct, ramp_time=duration_s)
             self.stop()
         elif fast_accel:
-            self._ramp(speed_pct, ramp_time=0.2)
+            self._ramp(speed_pct, ramp_time=0.1)
         else:
             self._ramp(speed_pct)
 
