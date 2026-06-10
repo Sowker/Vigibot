@@ -141,6 +141,10 @@ def handle_obstacle(robot: Robot, log: logging.Logger) -> None:
     time.sleep(RECUL_DUREE_S)
     robot.motor.stop()
 
+    # Fin du recul -> on coupe la sirène POLICE ici
+    with robot.state.lock:
+        robot.state.emergency_stop = False
+
     robot.feux_detresse(False)
 
     log.info("Pause de 2 s avant reprise du suivi de lumière")
@@ -182,7 +186,6 @@ def light_following_loop(robot: Robot, threshold_mm: float) -> None:
                 handle_obstacle(robot, log)
 
                 with robot.state.lock:
-                    robot.state.emergency_stop = False
                     driving = robot.state.driving
 
                 if driving:
