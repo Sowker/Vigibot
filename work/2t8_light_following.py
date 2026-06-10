@@ -77,20 +77,30 @@ class LightFollowingModule:
 
 if __name__ == "__main__":
     try:
-        from t3_servomotors import Head, SERVO_PCA
-        _HAS_SERVO = True
+        from t3_servomotors import (
+            ServoMotor, SERVO_PCA, CHANNEL_SERVO_WHEEL,
+            WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, WHEEL_ANGLE_CENTER,
+        )
+        from t4_dc_motor import DCMotor, Direction, SPEED_NORMAL_PCT
+        _HAS_HARDWARE = True
     except ImportError:
-        _HAS_SERVO = False
+        _HAS_HARDWARE = False
 
     sensor = LightFollowingModule(ch_left=0, ch_right=1)
 
-    print("=== Suivi de lumiere -> braquage roue (Ctrl+C pour arreter) ===")
+    print("=== Suivi de lumiere -> braquage + avance (Ctrl+C pour arreter) ===")
     print(f"{'Gauche':>7}  {'Droite':>7}  {'Ecart':>6}  Angle roue")
     print("-" * 38)
 
-    head = Head(SERVO_PCA) if _HAS_SERVO else None
-    if not _HAS_SERVO:
-        print("(t3_servomotors introuvable — affichage seul, pas de servo)\n")
+    if _HAS_HARDWARE:
+        # un seul servo cree (canal roue) -> ne touche pas a la tete
+        wheel = ServoMotor(SERVO_PCA, CHANNEL_SERVO_WHEEL,
+                           WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX,
+                           WHEEL_ANGLE_CENTER, "WHEEL")
+        motor = DCMotor(SERVO_PCA)
+    else:
+        wheel = motor = None
+        print("(t3_servomotors / t4_dc_motor introuvables — affichage seul)\n")
 
     try:
         while True:
@@ -99,8 +109,9 @@ if __name__ == "__main__":
                 angle = sensor.get_steer_angle(r)
                 print(f"{r.left:>7}  {r.right:>7}  {r.left - r.right:>6}  {angle:>5.0f}°", end="\r")
 
-                if head is not None:
-                    head.wheel.set_angle(angle)
+                if wheel is not None:
+                    wheel.set_angle(angle)
+                    motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
 
             except OSError as e:
                 print(f"\n[I2C] ADS7830 inaccessible (0x48) : {e}")
@@ -109,7 +120,8 @@ if __name__ == "__main__":
             time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print("\n\nArret — recentrage de la roue...")
-        if head is not None:
-            head.wheel.center()
+        print("\n\nArret — recentrage et coupure moteur...")
+        if wheel is not None:
+            wheel.center()
+            motor.stop()
         print("Programme developpe par l'Equipe C - MasterCamp SE 2026.")
