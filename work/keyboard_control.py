@@ -21,6 +21,8 @@ from adafruit_pca9685 import PCA9685
 import logging
 import logger
 
+from t1_front_led import setup as setup_front_leds, set_blink, cancel_blink, stop_blinkers
+from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head
 from t4_dc_motor import DCMotor, Direction, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
@@ -63,6 +65,10 @@ class Robot:
         self.head = Head(self._pca)
 
         self.led = Adeept_SPI_LedPixel(14, 255)
+        
+        # Initialisation des LEDs avant
+        self._log.info("Initialisation des LEDs avant…")
+        setup_front_leds()
 
         self.state = RobotState()
 
@@ -79,6 +85,7 @@ class Robot:
         self._log.info("══ Shutdown — remise à zéro ══")
         self.motor.reset()
         self.head.shutdown()
+        stop_blinkers()  # Éteindre les LEDs avant
         if self.led.is_alive():
             self.led.stop()
             self.led.join(timeout=2.0)
@@ -117,9 +124,9 @@ def thread_security_and_led(robot: Robot, interval: float, threshold_mm: float):
 
             if not warning_actif:
                 log.warning("⚠ OBSTACLE PROCHE (%.1f mm) ! Activation des feux de détresse.", distance)
-                # Déclenchement de tes feux de détresse (adapter selon ton matériel)
                 if hasattr(robot, 'led'):
                     robot.led.warning()
+                    set_blink('warning')  # Synchroniser les LEDs avant
                 warning_actif = True
         else:
             # Zone sûre
@@ -127,6 +134,7 @@ def thread_security_and_led(robot: Robot, interval: float, threshold_mm: float):
                 log.info("Obstacle écarté. Arrêt des feux de détresse.")
                 if hasattr(robot, 'led'):
                     robot.led.arreter_warning()
+                    cancel_blink()  # Arrêter les LEDs avant
                 warning_actif = False
 
         time.sleep(interval)
@@ -134,6 +142,7 @@ def thread_security_and_led(robot: Robot, interval: float, threshold_mm: float):
     # Extinction propre des warnings à l'arrêt du thread
     if hasattr(robot, 'led'):
         robot.led.arreter_warning()
+    cancel_blink()  # Arrêter les LEDs avant
     log.info("Thread Sécurité/LED arrêté")
 
 
