@@ -260,16 +260,23 @@ def buzzer_loop(robot: Robot) -> None:
         with robot.state.lock:
             return robot.state.running and robot.state.emergency_stop
 
+    def driving_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.driving and not robot.state.emergency_stop
+
     while True:
         with robot.state.lock:
             running   = robot.state.running
             emergency = robot.state.emergency_stop
+            driving   = robot.state.driving
 
         if not running:
             break
 
         if emergency:
             play(POLICE, emergency_active)
+        elif driving:
+            play(MII, driving_active)
         else:
             time.sleep(LOOP_PERIOD_S)
 
