@@ -8,6 +8,13 @@ import logger as log
 PIN_ULTRASONIC_TRIGGER = 23
 PIN_ULTRASONIC_ECHO    = 24
 
+class DistanceColor:
+    """Codes ANSI pour colorer les sorties texte dans le terminal."""
+    NEAR = "\033[31m"
+    OK   = "\033[33m"
+    FAR  = "\033[32m"
+    END  = "\033[0m"
+
 # ═══════════════════════════════════════════════════════════════════
 #  CAPTEUR ULTRASON
 # ═══════════════════════════════════════════════════════════════════
