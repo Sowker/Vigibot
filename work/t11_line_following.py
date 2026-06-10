@@ -35,6 +35,7 @@ from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MI
 
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
+from buzzer_Sirene import POLICE, MII, play, close_buzzer
 
 # ═══════════════════════════════════════════════════════════════════
 #  CONSTANTES DE CONFIGURATION
@@ -69,6 +70,7 @@ class RobotState:
     # ── Commandes de supervision ──────────────────────────────────
     running:        bool = True    # False → tous les threads s'arrêtent
     emergency_stop: bool = False   # True  → obstacle détecté
+    driving:        bool = False   # True  → le robot avance
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -120,6 +122,7 @@ class Robot:
             self.led.stop()
             self.led.join(timeout=2.0)
         self.led.led_close()
+        close_buzzer()
         self._pca.deinit()
         self._log.info("PCA9685 désactivé. Bonne journée !")
 
@@ -240,6 +243,8 @@ def thread_controller(robot: Robot, interval: float) -> None:
         if emergency:
             robot.motor.stop()
             robot.head.steer_center()
+            with robot.state.lock:
+                robot.state.driving = False
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             time.sleep(interval)
             continue
@@ -256,37 +261,82 @@ def thread_controller(robot: Robot, interval: float) -> None:
         if action == LineAction.STRAIGHT:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+            avance = True
 
         elif action == LineAction.TURN_LEFT_SOFT:
             robot.head.steer_left(STEER_SOFT_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            avance = True
 
         elif action == LineAction.TURN_RIGHT_SOFT:
             robot.head.steer_right(STEER_SOFT_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            avance = True
 
         elif action == LineAction.TURN_LEFT_HARD:
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+            avance = True
 
         elif action == LineAction.TURN_RIGHT_HARD:
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+            avance = True
 
         elif action == LineAction.INTERSECTION:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+            avance = True
 
         else:  # LineAction.LINE_LOST
             robot.motor.stop()
             robot.head.steer_center()
+            avance = False
 
+        with robot.state.lock:
+            robot.state.driving = avance
 
         time.sleep(interval)
 
     # ── Arrêt propre en fin de thread ─────────────────────────────
     robot.motor.stop()
     robot.head.steer_center()
+    log.info("Thread arrêté")
+
+
+def buzzer_loop(robot: Robot) -> None:
+    """
+    - Obstacle (emergency_stop) -> sirène POLICE
+    - Robot en mouvement (driving) -> thème MII
+    - À l'arrêt -> silence
+    """
+    log = logger.get_logger("BUZZER")
+    log.info("Thread démarré")
+
+    def emergency_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.emergency_stop
+
+    def driving_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.driving and not robot.state.emergency_stop
+
+    while True:
+        with robot.state.lock:
+            running   = robot.state.running
+            emergency = robot.state.emergency_stop
+            driving   = robot.state.driving
+
+        if not running:
+            break
+
+        if emergency:
+            play(POLICE, emergency_active)
+        elif driving:
+            play(MII, driving_active)
+        else:
+            time.sleep(SENSOR_INTERVAL_S)
+
     log.info("Thread arrêté")
 
 
@@ -342,6 +392,7 @@ if __name__ == "__main__":
         threading.Thread(target=thread_line, args=(robot, args.sensor_interval), name="LINE", daemon=True),
         threading.Thread(target=thread_LED, args=(robot, args.sensor_interval), name="LED", daemon=True),
         threading.Thread(target=thread_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
+        threading.Thread(target=buzzer_loop, args=(robot,), name="BUZZER", daemon=True),
     ]
 
     for t in threads:
