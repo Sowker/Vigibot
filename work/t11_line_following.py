@@ -33,6 +33,7 @@ from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, S
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 
+from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 
 # ═══════════════════════════════════════════════════════════════════
@@ -96,6 +97,9 @@ class Robot:
 
         self.led = Adeept_SPI_LedPixel(14, 255)
 
+        self._log.info("Initialisation des LEDs avant…")
+        self.front_leds = FrontLEDs()
+
     def init(self) -> None:
         self._log.info("══ Mise à zéro initiale ══")
         self.motor.reset()
@@ -103,12 +107,14 @@ class Robot:
         time.sleep(0.5)
         if self.led.check_spi_state() != 0:
             self.led.start()
+        self.front_leds.start()
         self._log.info("Robot prêt.")
 
     def shutdown(self) -> None:
         self._log.info("══ Shutdown — remise à zéro ══")
         self.motor.reset()
         self.head.shutdown()
+        self.front_leds.stop()
         time.sleep(0.5)
         if self.led.is_alive():
             self.led.stop()
