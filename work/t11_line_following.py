@@ -247,6 +247,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if action != last_action:
             log.info("Changement de comportement → %s", action.name)
+            if action == LineAction.LINE_LOST:
+                log.warning("Ligne perdue — recherche active / attente…")
+            elif action == LineAction.INTERSECTION:
+                log.info("Intersection détectée — passage tout droit")
             last_action = action
 
         if action == LineAction.STRAIGHT:
@@ -272,12 +276,11 @@ def thread_controller(robot: Robot, interval: float) -> None:
         elif action == LineAction.INTERSECTION:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            log.info("Intersection détectée — passage tout droit")
 
         else:  # LineAction.LINE_LOST
             robot.motor.stop()
             robot.head.steer_center()
-            log.warning("Ligne perdue — recherche active / attente…")
+
 
         time.sleep(interval)
 
