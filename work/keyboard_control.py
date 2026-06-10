@@ -61,6 +61,8 @@ class Robot:
         self.ultrasonic = UltrasonicSensor(cfg.us_trigger, cfg.us_echo)
         self.motor = DCMotor(self._pca)
         self.head = Head(self._pca)
+        if self.led.check_spi_state() != 0:
+            self.led.start()
 
         # Ajoute l'accès à la LED si ta classe Head ou Robot possède l'instance
         # Exemple supposé si robot.led existe ou via un autre module :
