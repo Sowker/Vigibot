@@ -9,8 +9,6 @@ tb = TonalBuzzer(18)
 POLICE =	[
     ["A5", 0.4], ["D5", 0.4],
     ["A5", 0.4], ["D5", 0.4],
-    ["A5", 0.4], ["D5", 0.4],
-    ["A5", 0.4], ["D5", 0.4]
 ]
 MII = [
     # 1ère phrase : tut, tut, tut, tut, tut... tut tut tuuut !
