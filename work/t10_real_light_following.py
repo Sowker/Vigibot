@@ -25,6 +25,7 @@ from gpiozero import TonalBuzzer
 import logging
 import logger
 
+import  buzzer_Sirene 
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head
@@ -260,6 +261,15 @@ def keyboard_loop(robot: Robot) -> None:
         elif cmd != "":
             print("Commande invalide. Utilisez : M (marche), A/a (arrêt) ou exit")
 
+def buzzer_loop():
+    log = logger.get_logger("BUZZER")
+    while True:
+        with robot.state.lock:
+            if not robot.state.running:
+                break
+            if robot.state.emergency_stop:
+                buzzer_Sirene.play(buzzer_Sirene.SONG)
+
 
 # ═══════════════════════════════════════════════════════════════════
 #  ARGUMENTS CLI
@@ -309,6 +319,14 @@ if __name__ == "__main__":
     )
     t_keyboard.start()
 
+    t_buzzer = threading.Thread(
+        target=buzzer_loop,
+        args=(robot,),
+        name="BUZZER",
+        daemon=True
+    )
+    t_buzzer.start()
+
     try:
         light_following_loop(robot, args.obstacle_mm)
     except KeyboardInterrupt:
@@ -318,6 +336,7 @@ if __name__ == "__main__":
         with robot.state.lock:
             robot.state.running = False
             robot.state.driving = False
-
+        t_buzzer.join(3.0)
+        t_keyboard.join(3.0)
         robot.shutdown()
         log.info("Programme terminé. Au revoir !")
