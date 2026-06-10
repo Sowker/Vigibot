@@ -19,7 +19,6 @@ import time
 import threading
 import argparse
 from dataclasses import dataclass, field
-from logging import warning
 from typing import Optional
 
 from board import SCL, SDA
@@ -231,9 +230,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     last_action: Optional[LineAction] = None
-
-    maneuver = False
-    maneuver_side = 0 # 0 default, -1 left, 1 right
+    maneuver = False  # True pendant une manœuvre de récupération (ligne perdue)
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -256,124 +253,68 @@ def thread_controller(robot: Robot, interval: float) -> None:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if action != last_action:
             log.info("Changement de comportement → %s", action.name)
-            last_action = action
 
-<<<<<<< HEAD
+        # ── Fin de la manœuvre dès que la ligne est retrouvée ─────
+        if maneuver and action != LineAction.LINE_LOST:
+            log.info("Ligne retrouvée — fin de la manœuvre")
+            maneuver = False
+
+        avance = True
+
         if action == LineAction.STRAIGHT:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            avance = True
 
         elif action == LineAction.TURN_LEFT_SOFT:
             robot.head.steer_left(STEER_SOFT_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            avance = True
 
         elif action == LineAction.TURN_RIGHT_SOFT:
             robot.head.steer_right(STEER_SOFT_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            avance = True
 
         elif action == LineAction.TURN_LEFT_HARD:
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-            avance = True
 
         elif action == LineAction.TURN_RIGHT_HARD:
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-            avance = True
 
         elif action == LineAction.INTERSECTION:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            avance = True
+            log.info("Intersection détectée — passage tout droit")
 
         else:  # LineAction.LINE_LOST
-            robot.motor.stop()
-            robot.head.steer_center()
             avance = False
+
+            if not maneuver:
+                log.warning("Ligne perdue — tentative de récupération")
+                match last_action:
+                    case LineAction.TURN_LEFT_SOFT | LineAction.TURN_LEFT_HARD:
+                        robot.head.steer_right(STEER_SOFT_DEG)
+                        robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
+                        log.warning("Manœuvre : recul + virage à droite")
+                        maneuver = True
+
+                    case LineAction.TURN_RIGHT_SOFT | LineAction.TURN_RIGHT_HARD:
+                        robot.head.steer_left(STEER_SOFT_DEG)
+                        robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
+                        log.warning("Manœuvre : recul + virage à gauche")
+                        maneuver = True
+
+                    case _:
+                        robot.motor.stop()
+                        robot.head.steer_center()
+                        log.warning("Ligne perdue, direction inconnue — arrêt")
+            # si maneuver est déjà en cours, on laisse le moteur continuer
+            # la manœuvre amorcée (recul + virage) sans réémettre de commande
+
+        last_action = action
 
         with robot.state.lock:
             robot.state.driving = avance
-=======
-            if maneuver:
-                if action == LineAction.STRAIGHT:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_LEFT_SOFT:
-                    robot.head.steer_left(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_RIGHT_SOFT:
-                    robot.head.steer_right(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_LEFT_HARD:
-                    robot.head.steer_left(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_RIGHT_HARD:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-
-                elif action == LineAction.INTERSECTION:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            else:
-                if action == LineAction.STRAIGHT:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_LEFT_SOFT:
-                    robot.head.steer_left(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_RIGHT_SOFT:
-                    robot.head.steer_right(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_LEFT_HARD:
-                    robot.head.steer_left(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-
-                elif action == LineAction.TURN_RIGHT_HARD:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-
-                elif action == LineAction.INTERSECTION:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                    log.info("Intersection détectée — passage tout droit")
-
-                elif action == LineAction.LINE_LOST:
-                    log.warning("Ligne perdue")
-                    match last_action:
-                        case LineAction.TURN_LEFT_SOFT:
-                            robot.head.steer_right(STEER_SOFT_DEG)
-                            robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                            log.warning("Trying turn right maneuver")
-                            break
-                        case LineAction.TURN_LEFT_HARD:
-                            robot.head.steer_right(STEER_HARD_DEG)
-                            robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                            log.warning("Trying turn right maneuver")
-                            break
-                        case LineAction.TURN_LEFT_SOFT:
-                            robot.head.steer_left(STEER_SOFT_DEG)
-                            robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                            log.warning("Trying turn left maneuver")
-                            break
-                        case LineAction.TURN_LEFT_HARD:
-                            robot.head.steer_left(STEER_HARD_DEG)
-                            robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                            log.warning("Trying turn left maneuver")
-                            break
-                        case _:
-                            log.warning("Just lost")
-                    maneuver = True
->>>>>>> bf32d58c4986b7eb4e6663bbcee0a47a6db71fec
 
         time.sleep(interval)
 
