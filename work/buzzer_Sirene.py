@@ -3,7 +3,7 @@ from gpiozero import TonalBuzzer
 from time import sleep
 
 # Initialize a TonalBuzzer connected to GPIO18 (BCM)
-tb = TonalBuzzer(18) 
+# tb = TonalBuzzer(18) 
 
 # Define a musical tune as a sequence of notes and durations.
 POLICE =	[

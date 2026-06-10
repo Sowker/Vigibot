@@ -33,6 +33,7 @@ from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, S
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 
+from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 
 # ═══════════════════════════════════════════════════════════════════
@@ -96,6 +97,9 @@ class Robot:
 
         self.led = Adeept_SPI_LedPixel(14, 255)
 
+        self._log.info("Initialisation des LEDs avant…")
+        self.front_leds = FrontLEDs()
+
     def init(self) -> None:
         self._log.info("══ Mise à zéro initiale ══")
         self.motor.reset()
@@ -103,12 +107,14 @@ class Robot:
         time.sleep(0.5)
         if self.led.check_spi_state() != 0:
             self.led.start()
+        self.front_leds.start()
         self._log.info("Robot prêt.")
 
     def shutdown(self) -> None:
         self._log.info("══ Shutdown — remise à zéro ══")
         self.motor.reset()
         self.head.shutdown()
+        self.front_leds.stop()
         time.sleep(0.5)
         if self.led.is_alive():
             self.led.stop()
@@ -167,28 +173,49 @@ def thread_line(robot: Robot, interval: float) -> None:
     log.info("Thread arrêté")
 
 def thread_LED(robot: Robot, interval: float):
+    """
+    Pilote les LEDs arrière (WS2812) ET les LEDs avant en parallèle :
+    - Obstacle (priorité 1) ou ligne perdue -> warning (avant + arrière)
+    - Virage gauche/droite -> clignotant correspondant (avant + arrière)
+    - Tout droit / intersection -> extinction des deux
+    """
     log = logger.get_logger("LED")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-    action = None
+
+    last_front_state = None  # 'left', 'right', 'warning' ou None
+
     while True:
         with robot.state.lock:
-
             if not robot.state.running:
                 break
-            action = robot.state.line_action
-            if action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
-                robot.led.clignotant_gauche()
-            elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
-                robot.led.clignotant_droit()
-            elif action == LineAction.LINE_LOST:
-                robot.led.warning()
-            elif action == LineAction.STRAIGHT:
-                robot.led.arreter_clignotants()
-                robot.led.arreter_warning()
+            action    = robot.state.line_action
+            emergency = robot.state.emergency_stop
 
+        if emergency:
+            target_state = 'warning'
+            robot.led.warning()
+        elif action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
+            target_state = 'left'
+            robot.led.clignotant_gauche()
+        elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
+            target_state = 'right'
+            robot.led.clignotant_droit()
+        elif action == LineAction.LINE_LOST:
+            target_state = 'warning'
+            robot.led.warning()
+        else:  # STRAIGHT / INTERSECTION
+            target_state = None
+            robot.led.arreter_clignotants()
+            robot.led.arreter_warning()
+
+        # front_leds.set_blink() est un toggle -> ne l'appeler que sur changement d'état
+        if target_state != last_front_state:
+            robot.front_leds.set_blink(target_state)
+            last_front_state = target_state
 
         time.sleep(interval)
 
+    robot.front_leds.cancel_blink()
     log.info("Thread arrêté")
 
 
@@ -220,37 +247,40 @@ def thread_controller(robot: Robot, interval: float) -> None:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if action != last_action:
             log.info("Changement de comportement → %s", action.name)
+            if action == LineAction.LINE_LOST:
+                log.warning("Ligne perdue — recherche active / attente…")
+            elif action == LineAction.INTERSECTION:
+                log.info("Intersection détectée — passage tout droit")
             last_action = action
 
         if action == LineAction.STRAIGHT:
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_LEFT_SOFT:
             robot.head.steer_left(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_RIGHT_SOFT:
             robot.head.steer_right(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_LEFT_HARD:
             robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_RIGHT_HARD:
             robot.head.steer_right(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
 
         elif action == LineAction.INTERSECTION:
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-            log.info("Intersection détectée — passage tout droit")
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
 
         else:  # LineAction.LINE_LOST
             robot.motor.stop()
             robot.head.steer_center()
-            log.warning("Ligne perdue — recherche active / attente…")
+
 
         time.sleep(interval)
 
