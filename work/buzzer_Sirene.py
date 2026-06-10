@@ -85,6 +85,9 @@ def play(tune):
         sleep(float(duration))  # Delay for the duration of the note
     tb.stop()  # Stop playing after the tune is complete
 
+def close_buzzer():
+    tb.close()
+
 if __name__ == "__main__":
     try:
         play(MII)  # Execute the play function to start playing the tune.

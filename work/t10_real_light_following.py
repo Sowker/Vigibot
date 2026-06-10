@@ -24,7 +24,7 @@ from adafruit_pca9685 import PCA9685
 import logging
 import logger
 
-from buzzer_Sirene import POLICE,MII, play
+from buzzer_Sirene import POLICE,MII, play, close_buzzer
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head
@@ -111,7 +111,7 @@ class Robot:
             self.led.stop()
             self.led.join(timeout=2.0)
         self.led.led_close()
-        buzzer_Sirene.tb.close()
+        close_buzzer()
         time.sleep(0.5)
         self._pca.deinit()
         self._log.info("PCA9685 désactivé. Bonne journée !")
