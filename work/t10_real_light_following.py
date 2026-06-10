@@ -253,6 +253,10 @@ def buzzer_loop(robot: Robot) -> None:
     log = logger.get_logger("BUZZER")
     log.info("Thread démarré")
 
+    def emergency_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.emergency_stop
+
     while True:
         with robot.state.lock:
             running   = robot.state.running
@@ -262,7 +266,7 @@ def buzzer_loop(robot: Robot) -> None:
             break
 
         if emergency:
-            play(POLICE)
+            play(POLICE, emergency_active)
         else:
             time.sleep(LOOP_PERIOD_S)
 
