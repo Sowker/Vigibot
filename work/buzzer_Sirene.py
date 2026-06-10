@@ -9,8 +9,6 @@ tb = TonalBuzzer(18)
 POLICE =	[
     ["A5", 0.4], ["D5", 0.4],
     ["A5", 0.4], ["D5", 0.4],
-    ["A5", 0.4], ["D5", 0.4],
-    ["A5", 0.4], ["D5", 0.4]
 ]
 MII = [
     # 1ère phrase : tut, tut, tut, tut, tut... tut tut tuuut !
@@ -84,6 +82,9 @@ def play(tune):
         tb.play(note)  # Play the note on the buzzer
         sleep(float(duration))  # Delay for the duration of the note
     tb.stop()  # Stop playing after the tune is complete
+
+def close_buzzer():
+    tb.close()
 
 if __name__ == "__main__":
     try:
