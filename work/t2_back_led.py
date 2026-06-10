@@ -286,9 +286,9 @@ class Adeept_SPI_LedPixel(threading.Thread):
     def attributeRGB(self, index, color, intensity): #index: int; color: str (r,g,b,n); intensity : int (0 to 255)
         if 0 <= index <= 13 and 0 <= intensity <= 255:
             if color == "R":
-                self.set_led_color(index, intensity, 0, 0)
-            elif color == "G":
-                self.set_led_color(index, 0, intensity, 0)
+                self.set_led_color(index, intensity, 0, 0)  #utilisation de la fonction set_led_color()
+            elif color == "G":                                    #qui demande un index et 3 indices pour le
+                self.set_led_color(index, 0, intensity, 0)  #R,G et B
             elif color == "B":
                 self.set_led_color(index, 0, 0, intensity)
             elif color == "N":
@@ -362,30 +362,17 @@ if __name__ == '__main__':
     import time
     import os
 
-    # Create controller for 12 LEDs
+    # Création du controller pour 14 leds
     led = Adeept_SPI_LedPixel(14, 255)
-    led.start()  # Use MOSI for /dev/spidev0 to drive the lights
+    led.start()  # Démarrage
 
     try:
-        if led.check_spi_state() != 0:
-            led.set_led_count(14)
-            led.set_all_led_color(0, 0, 0)
-            time.sleep(0.2)
-
-            led.warning()
-            time.sleep(5)
-            led.arreter_warning()
-            time.sleep(1)
-
-        else:
-            print("SPI not initialized")
+        while True:
+            index = int(input("Quel index? (0 à 14"))
+            color = input("Quelle couleur? (R,G,B ou N")
+            intensite = int(input("Quelle intensité? (0 à 255)"))
+            led.attributeRGB(index, color, intensite)
     except KeyboardInterrupt:
         print("Stopping...")
     finally:
-        # request stop and cleanup
-        led.lightMode = 'none'  # ask the worker to stop animations
-        try:
-            led._Adeept_SPI_LedPixel__flag.clear()  # pause the thread (private Event)
-        except Exception:
-            pass
         led.led_close()
