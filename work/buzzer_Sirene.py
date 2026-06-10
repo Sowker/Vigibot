@@ -71,13 +71,18 @@ MII = [
 
 ]
 
-def play(tune):
+def play(tune, should_continue=lambda: True):
     """
     Play a musical tune using the buzzer.
-    :param tune: List of tuples (note, duration), 
+    :param tune: List of tuples (note, duration),
     where each tuple represents a note and its duration.
+    :param should_continue: callable réévalué avant chaque note ; dès qu'il
+    renvoie False, la lecture s'arrête immédiatement (au lieu de jouer
+    l'air en entier).
     """
     for note, duration in tune:
+        if not should_continue():
+            break
         print(note)  # Output the current note being played
         tb.play(note)  # Play the note on the buzzer
         sleep(float(duration))  # Delay for the duration of the note

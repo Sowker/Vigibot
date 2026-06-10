@@ -141,6 +141,10 @@ def handle_obstacle(robot: Robot, log: logging.Logger) -> None:
     time.sleep(RECUL_DUREE_S)
     robot.motor.stop()
 
+    # Fin du recul -> on coupe la sirène POLICE ici
+    with robot.state.lock:
+        robot.state.emergency_stop = False
+
     robot.feux_detresse(False)
 
     log.info("Pause de 2 s avant reprise du suivi de lumière")
@@ -182,7 +186,6 @@ def light_following_loop(robot: Robot, threshold_mm: float) -> None:
                 handle_obstacle(robot, log)
 
                 with robot.state.lock:
-                    robot.state.emergency_stop = False
                     driving = robot.state.driving
 
                 if driving:
@@ -253,16 +256,27 @@ def buzzer_loop(robot: Robot) -> None:
     log = logger.get_logger("BUZZER")
     log.info("Thread démarré")
 
+    def emergency_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.emergency_stop
+
+    def driving_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.driving and not robot.state.emergency_stop
+
     while True:
         with robot.state.lock:
             running   = robot.state.running
             emergency = robot.state.emergency_stop
+            driving   = robot.state.driving
 
         if not running:
             break
 
         if emergency:
-            play(POLICE)
+            play(POLICE, emergency_active)
+        elif driving:
+            play(MII, driving_active)
         else:
             time.sleep(LOOP_PERIOD_S)
 
