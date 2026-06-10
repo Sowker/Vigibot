@@ -3,15 +3,16 @@
 ║         Robot Keyboard controlled — Main Controller                ║
 ║         Team C — MasterCamp SE 2026                                ║
 ╠════════════════════════════════════════════════════════════════════╣
-║  Architecture simplifiée :                                         ║
+║  Architecture épurée :                                             ║
 ║    • Saisie et exécution directes via input() standard             ║
+║    • Thread de sécurité pour l'ultrason + Feux de détresse (20cm)  ║
 ╚════════════════════════════════════════════════════════════════════╝
 """
 
 import time
 import argparse
-
-from t6_line_tracking import PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
+import threading
+from dataclasses import dataclass, field
 
 from board import SCL, SDA
 import busio
@@ -20,8 +21,8 @@ from adafruit_pca9685 import PCA9685
 import logging
 import logger
 
-from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG, CHANNEL_SERVO_VERTICAL
-from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
+from t3_servomotors import Head
+from t4_dc_motor import DCMotor, Direction, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 
 # ═══════════════════════════════════════════════════════════════════
@@ -30,7 +31,17 @@ from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTR
 
 PCA_ADDRESS = 0x5F
 PCA_FREQUENCY_HZ = 50
-OBSTACLE_THRESHOLD_MM = 150.0
+OBSTACLE_THRESHOLD_MM = 200.0  # Seuil fixé à 20 cm pour les feux de détresse
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  ÉTAT PARTAGÉ (Thread-Safe)
+# ═══════════════════════════════════════════════════════════════════
+
+@dataclass
+class RobotState:
+    lock: threading.Lock = field(default_factory=threading.Lock)
+    running: bool = True
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -51,6 +62,12 @@ class Robot:
         self.motor = DCMotor(self._pca)
         self.head = Head(self._pca)
 
+        # Ajoute l'accès à la LED si ta classe Head ou Robot possède l'instance
+        # Exemple supposé si robot.led existe ou via un autre module :
+        # self.led = LED()
+
+        self.state = RobotState()
+
     def init(self) -> None:
         self._log.info("══ Mise à zéro initiale ══")
         self.motor.reset()
@@ -68,6 +85,55 @@ class Robot:
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  THREAD SÉCURITÉ ET FEUX DE DÉTRESSE
+# ═══════════════════════════════════════════════════════════════════
+
+def thread_security_and_led(robot: Robot, interval: float, threshold_mm: float):
+    """
+    Surveille la distance en arrière-plan. Si un objet est détecté à moins de 20cm :
+    - Déclenche les feux de détresse (warning).
+    - Arrête les moteurs par sécurité.
+    """
+    log = logger.get_logger("SECURITY")
+    log.info("Thread Sécurité/LED démarré (intervalle=%.3f s)", interval)
+
+    warning_actif = False
+
+    while True:
+        with robot.state.lock:
+            if not robot.state.running:
+                break
+
+        # Lecture de la distance réelle du capteur
+        distance = robot.ultrasonic.read_mm()
+
+        if distance <= threshold_mm:
+            # Sécurité active : Objet à moins de 20cm
+            robot.motor.stop()
+
+            if not warning_actif:
+                log.warning("⚠ OBSTACLE PROCHE (%.1f mm) ! Activation des feux de détresse.", distance)
+                # Déclenchement de tes feux de détresse (adapter selon ton matériel)
+                if hasattr(robot, 'led'):
+                    robot.led.warning()
+                warning_actif = True
+        else:
+            # Zone sûre
+            if warning_actif:
+                log.info("Obstacle écarté. Arrêt des feux de détresse.")
+                if hasattr(robot, 'led'):
+                    robot.led.arreter_warning()
+                warning_actif = False
+
+        time.sleep(interval)
+
+    # Extinction propre des warnings à l'arrêt du thread
+    if hasattr(robot, 'led'):
+        robot.led.arreter_warning()
+    log.info("Thread Sécurité/LED arrêté")
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  ARGUMENTS CLI
 # ═══════════════════════════════════════════════════════════════════
 
@@ -81,17 +147,12 @@ def parse_args() -> argparse.Namespace:
     g_us.add_argument("--us-echo", type=int, default=PIN_ULTRASONIC_ECHO)
     g_us.add_argument("--obstacle-mm", type=float, default=OBSTACLE_THRESHOLD_MM)
 
-    g_line = p.add_argument_group("Capteurs de ligne")
-    g_line.add_argument("--line-left", type=int, default=PIN_LINE_LEFT)
-    g_line.add_argument("--line-mid", type=int, default=PIN_LINE_MIDDLE)
-    g_line.add_argument("--line-right", type=int, default=PIN_LINE_RIGHT)
-
     p.add_argument("--debug", action="store_true", help="Active les logs DEBUG")
     return p.parse_args()
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  POINT D'ENTRÉE (Séquentiel classique)
+#  POINT D'ENTRÉE (Saisie Principale)
 # ═══════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
@@ -108,24 +169,29 @@ if __name__ == "__main__":
     robot = Robot(args)
     robot.init()
 
-    print("\n=== GUIDE DES COMMANDES ===")
-    print("Moteurs   : z (Avancer), s (Reculer), a (Stopper Moteurs)")
-    print("Direction : q (Braquer Gauche), d (Braquer Droite), c (Centrer Roues)")
-    print("Tête      : o (Regarder Haut), l (Regarder Bas)")
-    print("Quitter   : exit\n")
-    print("👉 Tapez la lettre puis appuyez sur ENTREE pour valider.\n")
+    # Démarrage du thread de surveillance de l'ultrason + LED (période de 50ms)
+    t_secu = threading.Thread(
+        target=thread_security_and_led,
+        args=(robot, 0.05, args.obstacle_mm),
+        name="SECURITY",
+        daemon=True
+    )
+    t_secu.start()
 
-    vertical_angle = 90.0
+    print("\n=== GUIDE DES COMMANDES ===")
+    print("z : Marche AVANT")
+    print("s : Marche ARRIÈRE")
+    print("a : ARRÊT Moteurs")
+    print("exit : Quitter le programme\n")
+    print("👉 Entrez votre commande puis validez avec ENTREE.\n")
 
     try:
         while True:
-            # Saisie classique bloquante
             cmd = input("Commande > ").strip().lower()
 
             if cmd == "exit":
                 break
 
-            # Actionneurs Moteurs
             if cmd == 'z':
                 log.info("Action : En avant")
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
@@ -133,36 +199,19 @@ if __name__ == "__main__":
                 log.info("Action : En arrière")
                 robot.motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT)
             elif cmd == 'a':
-                log.info("Action : Stop moteurs")
+                log.info("Action : Arrêt")
                 robot.motor.stop()
-
-            # Actionneurs Servos (Direction)
-            elif cmd == 'q':
-                log.info("Action : Direction Gauche")
-                robot.head.steer_left(STEER_HARD_DEG)
-            elif cmd == 'd':
-                log.info("Action : Direction Droite")
-                robot.head.steer_right(STEER_HARD_DEG)
-            elif cmd == 'c':
-                log.info("Action : Centre la direction")
-                robot.head.steer_center()
-
-            # Actionneurs Servo Vertical Tête
-            elif cmd == 'o':
-                vertical_angle = min(170.0, vertical_angle + 15.0)
-                log.info("Action : Tête vers le haut (%.1f°)", vertical_angle)
-                robot.head.set_angle_motor(CHANNEL_SERVO_VERTICAL, vertical_angle)
-            elif cmd == 'l':
-                vertical_angle = max(10.0, vertical_angle - 15.0)
-                log.info("Action : Tête vers le bas (%.1f°)", vertical_angle)
-                robot.head.set_angle_motor(CHANNEL_SERVO_VERTICAL, vertical_angle)
-
             elif cmd != "":
-                print("Commande invalide. Utilisez : z, s, a, q, d, c, o, l ou exit")
+                print("Commande invalide. Utilisez uniquement : z, s, a ou exit")
 
     except KeyboardInterrupt:
-        log.info("Arrêt par Ctrl+C…")
+        log.info("Arrêt demandé par Ctrl+C…")
 
     finally:
+        # Indique au thread de s'arrêter
+        with robot.state.lock:
+            robot.state.running = False
+
+        t_secu.join(timeout=1.0)
         robot.shutdown()
         log.info("Programme terminé. Au revoir !")
