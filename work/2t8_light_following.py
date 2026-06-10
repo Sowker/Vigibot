@@ -44,7 +44,8 @@ class LightFollowingModule:
         left  = self.adc.analogRead(self.ch_left)
         right = self.adc.analogRead(self.ch_right)
 
-        diff = left - right
+        # inverse : valeur ADC plus faible = plus de lumiere de ce cote
+        diff = right - left
         if diff > self.threshold:
             direction = "LEFT"
         elif diff < -self.threshold:
@@ -61,7 +62,8 @@ class LightFollowingModule:
         if reading is None:
             reading = self.read()
 
-        diff = reading.left - reading.right
+        # inverse : valeur ADC plus faible = plus de lumiere de ce cote
+        diff = reading.right - reading.left
 
         if diff > hard_threshold:
             return STEER_HARD_LEFT
