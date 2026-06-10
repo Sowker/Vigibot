@@ -9,7 +9,7 @@ PIN_ULTRASONIC_TRIGGER = 23
 PIN_ULTRASONIC_ECHO    = 24
 
 # ═══════════════════════════════════════════════════════════════════
-#  MATÉRIEL — CAPTEUR ULTRASON
+#  CAPTEUR ULTRASON
 # ═══════════════════════════════════════════════════════════════════
 
 class UltrasonicSensor:
@@ -59,7 +59,6 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
-    # Note : Modifié RobotSensor en UltrasonicSensor pour correspondre à la classe définie plus haut
     sensor = UltrasonicSensor(
         trigger_pin=args.trigger,
         echo_pin=args.echo,
