@@ -224,27 +224,27 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
         if action == LineAction.STRAIGHT:
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_LEFT_SOFT:
             robot.head.steer_left(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_RIGHT_SOFT:
             robot.head.steer_right(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_LEFT_HARD:
             robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
 
         elif action == LineAction.TURN_RIGHT_HARD:
             robot.head.steer_right(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
 
         elif action == LineAction.INTERSECTION:
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
             log.info("Intersection détectée — passage tout droit")
 
         else:  # LineAction.LINE_LOST

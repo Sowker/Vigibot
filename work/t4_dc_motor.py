@@ -88,7 +88,8 @@ class DCMotor:
               direction:   Direction = Direction.FORWARD,
               speed_pct:   float     = SPEED_NORMAL_PCT,
               duration_s:  Optional[float] = None,
-              slow:        bool      = False) -> None:
+              slow:        bool      = False,
+              fast_accel: bool = False) -> None:
         if direction != self._direction:
             self.stop()
         self._direction = direction
@@ -99,6 +100,8 @@ class DCMotor:
         elif duration_s is not None and duration_s < 1.0:
             self._ramp(speed_pct, ramp_time=duration_s)
             self.stop()
+        elif fast_accel:
+            self._ramp(speed_pct, ramp_time=0.2)
         else:
             self._ramp(speed_pct)
 
