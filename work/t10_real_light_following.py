@@ -107,6 +107,7 @@ class Robot:
         if self.led.check_spi_state() != 0:
             self.led.start()
         self._log.info("Robot prêt.")
+        tb = TonalBuzzer(18) 
 
     def shutdown(self) -> None:
         self._log.info("══ Shutdown — remise à zéro ══")
