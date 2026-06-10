@@ -61,12 +61,8 @@ class Robot:
         self.ultrasonic = UltrasonicSensor(cfg.us_trigger, cfg.us_echo)
         self.motor = DCMotor(self._pca)
         self.head = Head(self._pca)
-        if self.led.check_spi_state() != 0:
-            self.led.start()
 
-        # Ajoute l'accès à la LED si ta classe Head ou Robot possède l'instance
-        # Exemple supposé si robot.led existe ou via un autre module :
-        # self.led = LED()
+        self.led = Adeept_SPI_LedPixel(14, 255)
 
         self.state = RobotState()
 
@@ -75,12 +71,18 @@ class Robot:
         self.motor.reset()
         self.head.reset()
         time.sleep(0.5)
+        if self.led.check_spi_state() != 0:
+            self.led.start()
         self._log.info("Robot prêt.")
 
     def shutdown(self) -> None:
         self._log.info("══ Shutdown — remise à zéro ══")
         self.motor.reset()
         self.head.shutdown()
+        if self.led.is_alive():
+            self.led.stop()
+            self.led.join(timeout=2.0)
+        self.led.led_close()
         time.sleep(0.5)
         self._pca.deinit()
         self._log.info("PCA9685 désactivé. Bonne journée !")
