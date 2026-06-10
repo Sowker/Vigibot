@@ -35,10 +35,10 @@ class LineTracker:
     # Attribut de classe : partagé, alloué une seule fois en mémoire
     TRUTH_TABLE = {
         (1, 0, 1): LineAction.STRAIGHT,
-        (0, 1, 1): LineAction.TURN_RIGHT_SOFT,
-        (1, 1, 0): LineAction.TURN_LEFT_SOFT,
-        (0, 0, 1): LineAction.TURN_RIGHT_HARD,
-        (1, 0, 0): LineAction.TURN_LEFT_HARD,
+        (0, 1, 1): LineAction.TURN_LEFT_SOFT,
+        (1, 1, 0): LineAction.TURN_RIGHT_SOFT,
+        (0, 0, 1): LineAction.TURN_LEFT_HARD,
+        (1, 0, 0): LineAction.TURN_RIGHT_HARD,
         (0, 0, 0): LineAction.INTERSECTION,
         (1, 1, 1): LineAction.LINE_LOST,
     }

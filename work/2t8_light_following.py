@@ -44,7 +44,8 @@ class LightFollowingModule:
         left  = self.adc.analogRead(self.ch_left)
         right = self.adc.analogRead(self.ch_right)
 
-        diff = left - right
+        # inverse : valeur ADC plus faible = plus de lumiere de ce cote
+        diff = right - left
         if diff > self.threshold:
             direction = "LEFT"
         elif diff < -self.threshold:
@@ -61,7 +62,8 @@ class LightFollowingModule:
         if reading is None:
             reading = self.read()
 
-        diff = reading.left - reading.right
+        # inverse : valeur ADC plus faible = plus de lumiere de ce cote
+        diff = reading.right - reading.left
 
         if diff > hard_threshold:
             return STEER_HARD_LEFT
@@ -98,6 +100,9 @@ if __name__ == "__main__":
                            WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX,
                            WHEEL_ANGLE_CENTER, "WHEEL")
         motor = DCMotor(SERVO_PCA)
+        # une seule rampe au demarrage (sinon drive() relance une rampe a
+        # chaque iteration de la boucle -> moteur qui "bippe")
+        motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     else:
         wheel = motor = None
         print("(t3_servomotors / t4_dc_motor introuvables — affichage seul)\n")
@@ -111,7 +116,6 @@ if __name__ == "__main__":
 
                 if wheel is not None:
                     wheel.set_angle(angle)
-                    motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
 
             except OSError as e:
                 print(f"\n[I2C] ADS7830 inaccessible (0x48) : {e}")
