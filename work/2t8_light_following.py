@@ -2,16 +2,23 @@ import time
 import smbus
 from collections import namedtuple
 
+# Resultat de lecture : valeurs des deux capteurs + direction deduite
 LightReading = namedtuple("LightReading", ["left", "right", "direction"])
-"""
-left      : int 0-255  valeur ADC capteur gauche
-right     : int 0-255  valeur ADC capteur droit
-direction : "LEFT" | "RIGHT" | "CENTER"
-"""
+
+# 5 angles de braquage possibles (repris de t3_servomotors.py)
+WHEEL_ANGLE_CENTER = 90
+STEER_SOFT_DEG     = 15
+STEER_HARD_DEG     = 35
+
+STEER_HARD_LEFT  = WHEEL_ANGLE_CENTER - STEER_HARD_DEG   # 55
+STEER_SOFT_LEFT  = WHEEL_ANGLE_CENTER - STEER_SOFT_DEG   # 75
+STEER_CENTER     = WHEEL_ANGLE_CENTER                    # 90
+STEER_SOFT_RIGHT = WHEEL_ANGLE_CENTER + STEER_SOFT_DEG   # 105
+STEER_HARD_RIGHT = WHEEL_ANGLE_CENTER + STEER_HARD_DEG   # 125
 
 
 class ADS7830:
-    """ADC ADS7830 via I2C — 8 canaux, resolution 8 bits (0-255)."""
+    # ADC I2C, 8 canaux (0-7), valeurs 0-255
 
     def __init__(self, address: int = 0x48):
         self.cmd     = 0x84
@@ -26,22 +33,6 @@ class ADS7830:
 
 
 class LightFollowingModule:
-    """
-    Lecture des deux capteurs de lumiere (gauche + droite) sur deux canaux ADC.
-
-    Utilisation depuis un autre fichier :
-        from work.t8_light_following import LightFollowingModule
-        sensor = LightFollowingModule(ch_left=0, ch_right=1)
-        r = sensor.read()
-        print(r.left, r.right, r.direction)
-
-    Parametres
-    ----------
-    ch_left   : canal ADC du capteur gauche  (defaut 0)
-    ch_right  : canal ADC du capteur droit   (defaut 1)
-    threshold : ecart minimal pour decider LEFT/RIGHT  (defaut 15)
-    """
-
     def __init__(self, ch_left: int = 0, ch_right: int = 1, threshold: int = 15):
         self.adc       = ADS7830()
         self.ch_left   = ch_left
@@ -49,10 +40,7 @@ class LightFollowingModule:
         self.threshold = threshold
 
     def read(self) -> LightReading:
-        """
-        Lit les deux capteurs et retourne un LightReading.
-        Peut lever OSError si l'ADS7830 n'est pas accessible en I2C.
-        """
+        # lit les deux capteurs et determine de quel cote vient la lumiere
         left  = self.adc.analogRead(self.ch_left)
         right = self.adc.analogRead(self.ch_right)
 
@@ -66,26 +54,62 @@ class LightFollowingModule:
 
         return LightReading(left=left, right=right, direction=direction)
 
+    def get_steer_angle(self, reading: LightReading = None,
+                         soft_threshold: int = 15,
+                         hard_threshold: int = 50) -> float:
+        # convertit l'ecart de lumiere en un des 5 angles de braquage
+        if reading is None:
+            reading = self.read()
+
+        diff = reading.left - reading.right
+
+        if diff > hard_threshold:
+            return STEER_HARD_LEFT
+        elif diff > soft_threshold:
+            return STEER_SOFT_LEFT
+        elif diff < -hard_threshold:
+            return STEER_HARD_RIGHT
+        elif diff < -soft_threshold:
+            return STEER_SOFT_RIGHT
+        else:
+            return STEER_CENTER
+
 
 if __name__ == "__main__":
-    # Scan de tous les canaux pour identifier lesquels sont des capteurs de lumiere
-    adc = ADS7830()
-    print("Scan de tous les canaux — bougez la lumiere pour voir lesquels reagissent")
-    print("Canaux non branches = valeur fixe. Canaux actifs = valeur variable.\n")
-    print("  " + "  ".join(f"CH{i}" for i in range(8)))
-    print("-" * 44)
+    try:
+        from t3_servomotors import Head, SERVO_PCA
+        _HAS_SERVO = True
+    except ImportError:
+        _HAS_SERVO = False
+
+    sensor = LightFollowingModule(ch_left=0, ch_right=1)
+
+    print("=== Suivi de lumiere -> braquage roue (Ctrl+C pour arreter) ===")
+    print(f"{'Gauche':>7}  {'Droite':>7}  {'Ecart':>6}  Angle roue")
+    print("-" * 38)
+
+    head = Head(SERVO_PCA) if _HAS_SERVO else None
+    if not _HAS_SERVO:
+        print("(t3_servomotors introuvable — affichage seul, pas de servo)\n")
 
     try:
         while True:
             try:
-                vals = [adc.analogRead(i) for i in range(8)]
-                print("  " + "  ".join(f"{v:>3}" for v in vals), end="\r")
+                r     = sensor.read()
+                angle = sensor.get_steer_angle(r)
+                print(f"{r.left:>7}  {r.right:>7}  {r.left - r.right:>6}  {angle:>5.0f}°", end="\r")
+
+                if head is not None:
+                    head.wheel.set_angle(angle)
+
             except OSError as e:
                 print(f"\n[I2C] ADS7830 inaccessible (0x48) : {e}")
                 time.sleep(0.5)
+
             time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print("\n\nIdentifiez les canaux actifs, puis utilisez :")
-        print("  sensor = LightFollowingModule(ch_left=X, ch_right=Y)")
+        print("\n\nArret — recentrage de la roue...")
+        if head is not None:
+            head.wheel.center()
         print("Programme developpe par l'Equipe C - MasterCamp SE 2026.")
