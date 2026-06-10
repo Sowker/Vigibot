@@ -39,8 +39,8 @@ class LineTracker:
         (1, 1, 0): LineAction.TURN_RIGHT_SOFT,
         (0, 0, 1): LineAction.TURN_LEFT_HARD,
         (1, 0, 0): LineAction.TURN_RIGHT_HARD,
-        (0, 0, 0): LineAction.INTERSECTION,
-        (1, 1, 1): LineAction.LINE_LOST,
+        (1, 1, 1): LineAction.INTERSECTION,
+        (0, 0, 0): LineAction.LINE_LOST,
     }
 
     def __init__(self,
