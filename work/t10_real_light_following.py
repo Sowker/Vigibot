@@ -261,7 +261,7 @@ def keyboard_loop(robot: Robot) -> None:
         elif cmd != "":
             print("Commande invalide. Utilisez : M (marche), A/a (arrêt) ou exit")
 
-def buzzer_loop():
+def buzzer_loop(robot: Robot):
     log = logger.get_logger("BUZZER")
     while True:
         with robot.state.lock:
