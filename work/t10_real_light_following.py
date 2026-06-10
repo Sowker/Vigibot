@@ -24,7 +24,7 @@ from adafruit_pca9685 import PCA9685
 import logging
 import logger
 
-import buzzer_Sirene
+from buzzer_Sirene import SONG, play
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head
@@ -262,7 +262,7 @@ def buzzer_loop(robot: Robot) -> None:
             break
 
         if emergency:
-            buzzer_Sirene.play(buzzer_Sirene.SONG)
+            play(SONG)
         else:
             time.sleep(LOOP_PERIOD_S)
 
