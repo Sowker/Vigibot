@@ -51,6 +51,14 @@ OBSTACLE_THRESHOLD_MM = 150.0  # mm — seuil d'arrêt d'urgence
 CTRL_INTERVAL_S       = 0.05   # s — période du thread contrôleur
 SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
+# ── Buzzer ─────────────────────────────────────────────────────────
+# Son joué pendant les manœuvres de récupération (recul + virage quand
+# la ligne est perdue) :
+#   None      -> silence
+#   "MII"     -> thème MII (comme en roulage normal)
+#   "POLICE"  -> sirène POLICE (comme en urgence obstacle)
+LINE_LOST_SOUND = "MII"
+
 # ═══════════════════════════════════════════════════════════════════
 #  ÉTAT PARTAGÉ (thread-safe)
 # ═══════════════════════════════════════════════════════════════════
@@ -71,6 +79,7 @@ class RobotState:
     running:        bool = True    # False → tous les threads s'arrêtent
     emergency_stop: bool = False   # True  → obstacle détecté
     driving:        bool = False   # True  → le robot avance
+    maneuver:       bool = False   # True  → manœuvre de récupération (ligne perdue)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -314,7 +323,8 @@ def thread_controller(robot: Robot, interval: float) -> None:
         last_action = action
 
         with robot.state.lock:
-            robot.state.driving = avance
+            robot.state.driving  = avance
+            robot.state.maneuver = maneuver
 
         time.sleep(interval)
 
@@ -326,9 +336,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
 def buzzer_loop(robot: Robot) -> None:
     """
-    - Obstacle (emergency_stop) -> sirène POLICE
-    - Robot en mouvement (driving) -> thème MII
-    - À l'arrêt -> silence
+    - Obstacle (emergency_stop)         -> sirène POLICE
+    - Manœuvre de récupération (maneuver) -> son défini par LINE_LOST_SOUND
+    - Robot en mouvement (driving)      -> thème MII
+    - À l'arrêt                         -> silence
     """
     log = logger.get_logger("BUZZER")
     log.info("Thread démarré")
@@ -336,6 +347,10 @@ def buzzer_loop(robot: Robot) -> None:
     def emergency_active() -> bool:
         with robot.state.lock:
             return robot.state.running and robot.state.emergency_stop
+
+    def maneuver_active() -> bool:
+        with robot.state.lock:
+            return robot.state.running and robot.state.maneuver and not robot.state.emergency_stop
 
     def driving_active() -> bool:
         with robot.state.lock:
@@ -345,6 +360,7 @@ def buzzer_loop(robot: Robot) -> None:
         with robot.state.lock:
             running   = robot.state.running
             emergency = robot.state.emergency_stop
+            maneuver  = robot.state.maneuver
             driving   = robot.state.driving
 
         if not running:
@@ -352,6 +368,10 @@ def buzzer_loop(robot: Robot) -> None:
 
         if emergency:
             play(POLICE, emergency_active)
+        elif maneuver and LINE_LOST_SOUND == "POLICE":
+            play(POLICE, maneuver_active)
+        elif maneuver and LINE_LOST_SOUND == "MII":
+            play(MII, maneuver_active)
         elif driving:
             play(MII, driving_active)
         else:
