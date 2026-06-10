@@ -173,28 +173,49 @@ def thread_line(robot: Robot, interval: float) -> None:
     log.info("Thread arrêté")
 
 def thread_LED(robot: Robot, interval: float):
+    """
+    Pilote les LEDs arrière (WS2812) ET les LEDs avant en parallèle :
+    - Obstacle (priorité 1) ou ligne perdue -> warning (avant + arrière)
+    - Virage gauche/droite -> clignotant correspondant (avant + arrière)
+    - Tout droit / intersection -> extinction des deux
+    """
     log = logger.get_logger("LED")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-    action = None
+
+    last_front_state = None  # 'left', 'right', 'warning' ou None
+
     while True:
         with robot.state.lock:
-
             if not robot.state.running:
                 break
-            action = robot.state.line_action
-            if action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
-                robot.led.clignotant_gauche()
-            elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
-                robot.led.clignotant_droit()
-            elif action == LineAction.LINE_LOST:
-                robot.led.warning()
-            elif action == LineAction.STRAIGHT:
-                robot.led.arreter_clignotants()
-                robot.led.arreter_warning()
+            action    = robot.state.line_action
+            emergency = robot.state.emergency_stop
 
+        if emergency:
+            target_state = 'warning'
+            robot.led.warning()
+        elif action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
+            target_state = 'left'
+            robot.led.clignotant_gauche()
+        elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
+            target_state = 'right'
+            robot.led.clignotant_droit()
+        elif action == LineAction.LINE_LOST:
+            target_state = 'warning'
+            robot.led.warning()
+        else:  # STRAIGHT / INTERSECTION
+            target_state = None
+            robot.led.arreter_clignotants()
+            robot.led.arreter_warning()
+
+        # front_leds.set_blink() est un toggle -> ne l'appeler que sur changement d'état
+        if target_state != last_front_state:
+            robot.front_leds.set_blink(target_state)
+            last_front_state = target_state
 
         time.sleep(interval)
 
+    robot.front_leds.cancel_blink()
     log.info("Thread arrêté")
 
 
