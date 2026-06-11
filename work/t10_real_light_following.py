@@ -24,7 +24,7 @@ from adafruit_pca9685 import PCA9685
 import logging
 import logger
 
-from buzzer_Sirene import POLICE,MII, play, close_buzzer
+from t11_buzzer_Sirene import POLICE,MII, play, close_buzzer
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head

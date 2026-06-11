@@ -5,7 +5,7 @@ from gpiozero import InputDevice
 
 import logger as log
 
-class LineAction(IntEnum):
+class LinePosition(IntEnum):
     """Actions déduites des capteurs de ligne."""
     STRAIGHT        = 0
     TURN_LEFT_SOFT  = 1
@@ -34,13 +34,13 @@ class LineTracker:
 
     # Attribut de classe : partagé, alloué une seule fois en mémoire
     TRUTH_TABLE = {
-        (1, 0, 1): LineAction.STRAIGHT,
-        (0, 1, 1): LineAction.TURN_LEFT_SOFT,
-        (1, 1, 0): LineAction.TURN_RIGHT_SOFT,
-        (0, 0, 1): LineAction.TURN_LEFT_HARD,
-        (1, 0, 0): LineAction.TURN_RIGHT_HARD,
-        (1, 1, 1): LineAction.INTERSECTION,
-        (0, 0, 0): LineAction.LINE_LOST,
+        (0, 1, 0): LinePosition.STRAIGHT,
+        (0, 1, 1): LinePosition.TURN_LEFT_SOFT,
+        (1, 1, 0): LinePosition.TURN_RIGHT_SOFT,
+        (0, 0, 1): LinePosition.TURN_LEFT_HARD,
+        (1, 0, 0): LinePosition.TURN_RIGHT_HARD,
+        (1, 1, 1): LinePosition.INTERSECTION,
+        (0, 0, 0): LinePosition.LINE_LOST,
     }
 
     def __init__(self,
@@ -58,7 +58,7 @@ class LineTracker:
         """Retourne l'état brut instantané (gauche, milieu, droite)."""
         return self._left.value, self._middle.value, self._right.value
 
-    def read_action(self) -> LineAction:
+    def read_action(self) -> LinePosition:
         """
         Méthode d'instance pratique.
         Lit les capteurs matériels et renvoie directement l'action décodée.
@@ -67,10 +67,10 @@ class LineTracker:
         return self.decode(left, middle, right)
 
     @staticmethod
-    def decode(left: int, middle: int, right: int) -> LineAction:
+    def decode(left: int, middle: int, right: int) -> LinePosition:
         """Traduit les 3 valeurs binaires en une action de conduite."""
         pattern = (left, middle, right)
-        return LineTracker.TRUTH_TABLE.get(pattern, LineAction.LINE_LOST)
+        return LineTracker.TRUTH_TABLE.get(pattern, LinePosition.LINE_LOST)
 
 
 def parse_arguments() -> argparse.Namespace:

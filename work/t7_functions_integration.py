@@ -31,7 +31,7 @@ import logger
 from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
-from t6_line_tracking import LineTracker, LineAction, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
+from t6_line_tracking import LineTracker, LinePosition, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 
 from t2_back_led import Adeept_SPI_LedPixel
 
@@ -63,7 +63,7 @@ class RobotState:
 
     # ── Données capteurs synthétisées ──────────────────────────────
     distance_mm: float = 9999.0
-    line_action: LineAction = LineAction.LINE_LOST  # Stockage direct de l'action décodée
+    line_action: LinePosition = LinePosition.LINE_LOST  # Stockage direct de l'action décodée
 
     # ── Commandes de supervision ──────────────────────────────────
     running:        bool = True    # False → tous les threads s'arrêtent
@@ -176,13 +176,13 @@ def thread_LED(robot: Robot, interval: float):
             if not robot.state.running:
                 break
             action = robot.state.line_action
-            if action == LineAction.TURN_LEFT_SOFT or action == LineAction.TURN_LEFT_HARD:
+            if action == LinePosition.TURN_LEFT_SOFT or action == LinePosition.TURN_LEFT_HARD:
                 robot.led.clignotant_gauche()
-            elif action == LineAction.TURN_RIGHT_SOFT or action == LineAction.TURN_RIGHT_HARD:
+            elif action == LinePosition.TURN_RIGHT_SOFT or action == LinePosition.TURN_RIGHT_HARD:
                 robot.led.clignotant_droit()
-            elif action == LineAction.LINE_LOST:
+            elif action == LinePosition.LINE_LOST:
                 robot.led.warning()
-            elif action == LineAction.STRAIGHT:
+            elif action == LinePosition.STRAIGHT:
                 robot.led.arreter_clignotants()
                 robot.led.arreter_warning()
 
@@ -199,7 +199,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
-    last_action: Optional[LineAction] = None
+    last_action: Optional[LinePosition] = None
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -222,32 +222,32 @@ def thread_controller(robot: Robot, interval: float) -> None:
             log.info("Changement de comportement → %s", action.name)
             last_action = action
 
-        if action == LineAction.STRAIGHT:
+        if action == LinePosition.STRAIGHT:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
 
-        elif action == LineAction.TURN_LEFT_SOFT:
+        elif action == LinePosition.TURN_LEFT_SOFT:
             robot.head.steer_left(STEER_SOFT_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
 
-        elif action == LineAction.TURN_RIGHT_SOFT:
+        elif action == LinePosition.TURN_RIGHT_SOFT:
             robot.head.steer_right(STEER_SOFT_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
 
-        elif action == LineAction.TURN_LEFT_HARD:
+        elif action == LinePosition.TURN_LEFT_HARD:
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
 
-        elif action == LineAction.TURN_RIGHT_HARD:
+        elif action == LinePosition.TURN_RIGHT_HARD:
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
 
-        elif action == LineAction.INTERSECTION:
+        elif action == LinePosition.INTERSECTION:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
             log.info("Intersection détectée — passage tout droit")
 
-        else:  # LineAction.LINE_LOST
+        else:  # LinePosition.LINE_LOST
             robot.motor.stop()
             robot.head.steer_center()
             log.warning("Ligne perdue — recherche active / attente…")
