@@ -258,7 +258,7 @@ def thread_buzzer(robot: Robot) -> None:
         with robot.state.lock:
             return robot.state.running and robot.state.driving and not robot.state.emergency_stop
 
-    while True:
+    while False:
         with robot.state.lock:
             running   = robot.state.running
             emergency = robot.state.emergency_stop
