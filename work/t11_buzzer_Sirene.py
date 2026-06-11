@@ -83,7 +83,6 @@ def play(tune, should_continue=lambda: True):
     for note, duration in tune:
         if not should_continue():
             break
-        print(note)  # Output the current note being played
         tb.play(note)  # Play the note on the buzzer
         sleep(float(duration))  # Delay for the duration of the note
     tb.stop()  # Stop playing after the tune is complete
