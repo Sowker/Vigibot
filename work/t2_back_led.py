@@ -302,10 +302,10 @@ class Adeept_SPI_LedPixel(threading.Thread):
         self.resume()
 
     def clignotant_gauche(self):
-        self.clignotant("R")
+        self.clignotant("L")
 
     def clignotant_droit(self):
-        self.clignotant("L")
+        self.clignotant("R")
 
     def arreter_clignotants(self):
         self.pause()
