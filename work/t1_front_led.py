@@ -202,6 +202,8 @@ if __name__ == "__main__":
                 leds.switch(num, 0)
             else:
                 print('Wrong Command: Example--11 pour allumer LED1')
+    except KeyboardInterrupt:
+        pass
     finally:
         leds.stop()
 
