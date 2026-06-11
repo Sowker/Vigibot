@@ -19,6 +19,7 @@ SPEED_NORMAL_PCT      = 35   # % puissance — ligne droite
 SPEED_TURNING_PCT     = 40   # % puissance — virage doux
 SPEED_ADJUSTING_PCT   = 40
 SPEED_BACKWARD        = 30   # % puissance — utilisé généralement pour aller en arrière
+SPEED_HIGH = 50
 
 class Direction(IntEnum):
     """Sens de marche du moteur DC."""

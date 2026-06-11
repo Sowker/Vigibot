@@ -6,7 +6,7 @@ import logger
 
 
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT
+from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
 from t6_line_tracking import LinePosition
 from t11_buzzer_Sirene import POLICE, MII, play
 
@@ -214,14 +214,14 @@ def thread_controller(robot: Robot, interval: float) -> None:
             if last_turn == -1: # if we were turning left
                 if action == LinePosition.TURN_RIGHT_HARD:
                     log.info("LinePosition.TURN_RIGHT_HARD")
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+                    robot.head.steer_left(STEER_SOFT_DEG)
+                    robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
                     robot.state.maneuver = False
                     count_maneuver = 0
             elif last_turn == 1: # if we were turning right
                 if action == LinePosition.TURN_LEFT_HARD:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+                    robot.head.steer_right(STEER_SOFT_DEG)
+                    robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
                     robot.state.maneuver = False
                     count_maneuver = 0
                     log.info("LinePosition.TURN_LEFT_HARD")
