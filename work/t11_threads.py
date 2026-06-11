@@ -126,7 +126,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     last_action: Optional[LinePosition] = None
-    maneuver = False  # True pendant une manœuvre de récupération (ligne perdue)
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -135,13 +134,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 break
             emergency = robot.state.emergency_stop
             action    = robot.state.line_action
+            maneuver = robot.state.maneuver
 
         # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
         if emergency:
             robot.motor.stop()
             robot.head.steer_center()
-            with robot.state.lock:
-                robot.state.driving = False
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             time.sleep(interval)
             continue
@@ -149,13 +147,11 @@ def thread_controller(robot: Robot, interval: float) -> None:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if action != last_action:
             log.info("Changement de comportement → %s", action.name)
-
-        # ── Fin de la manœuvre dès que la ligne est retrouvée ─────
-        if maneuver and action != LinePosition.LINE_LOST:
-            log.info("Ligne retrouvée — fin de la manœuvre")
-            maneuver = False
-
-        avance = True
+            if action == LinePosition.LINE_LOST:
+                log.warning("Ligne perdue — recherche active / attente…")
+            elif action == LinePosition.INTERSECTION:
+                log.info("Intersection détectée — passage tout droit")
+            last_action = action
 
         if action == LinePosition.STRAIGHT:
             robot.head.steer_center()
@@ -180,40 +176,11 @@ def thread_controller(robot: Robot, interval: float) -> None:
         elif action == LinePosition.INTERSECTION:
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            log.info("Intersection détectée — passage tout droit")
 
         else:  # LinePosition.LINE_LOST
-            avance = False
+            robot.motor.stop()
+            robot.head.steer_center()
 
-            if not maneuver:
-                log.warning("Ligne perdue — tentative de récupération")
-                match last_action:
-                    case LinePosition.TURN_LEFT_SOFT | LinePosition.TURN_LEFT_HARD:
-                        robot.head.steer_right(STEER_SOFT_DEG)
-                        robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                        log.warning("Manœuvre : recul + virage à droite")
-                        maneuver = True
-
-                    case LinePosition.TURN_RIGHT_SOFT | LinePosition.TURN_RIGHT_HARD:
-                        robot.head.steer_left(STEER_SOFT_DEG)
-                        robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                        log.warning("Manœuvre : recul + virage à gauche")
-                        maneuver = True
-
-                    case _:
-                        robot.motor.stop()
-                        robot.head.steer_center()
-                        log.warning("Ligne perdue, direction inconnue — arrêt")
-            # si maneuver est déjà en cours, on laisse le moteur continuer
-            # la manœuvre amorcée (recul + virage) sans réémettre de commande
-
-
-
-        last_action = action
-
-        with robot.state.lock:
-            robot.state.driving  = avance
-            robot.state.maneuver = maneuver
 
         time.sleep(interval)
 
