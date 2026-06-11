@@ -193,6 +193,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 # ICI INPUT DE DIRECTION
                 robot.state.maneuver = True
         else:
+            print("In maneuver last turn "+ str(last_turn)+"refund line"+str(re_found_line))
             if action == LinePosition.LINE_LOST:
                 if re_found_line == True:
                     pass # we loose refound and relost line, act
