@@ -193,12 +193,9 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 # ICI INPUT DE DIRECTION
                 robot.state.maneuver = True
         else:
-            print("In maneuver last turn "+ str(last_turn)+"refund line"+str(re_found_line))
-            if action == LinePosition.LINE_LOST:
-                if re_found_line == True:
-                    pass # we loose refound and relost line, act
-                else:
-                    pass # nothing to do, continue the maneuver
+            print("In maneuver last turn "+ str(last_turn)+" refund line "+str(re_found_line))
+            if re_found_line == True and action == LinePosition.LINE_LOST: # we loose refound and relost line, act
+                pass
             else:
                 if last_turn == 0:
                     robot.head.steer_center()
