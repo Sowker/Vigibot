@@ -72,14 +72,12 @@ if __name__ == "__main__":
         max_dist_m=args.max_dist
     )
 
-    # Boucle principale externe
+    # Boucle principale
     try:
         print("Démarrage des mesures en continu... (Appuyez sur Ctrl+C pour arrêter)")
         while True:
-            # Appel de la méthode de la classe à l'extérieur
             distance = sensor.read_mm()
 
-            # Logique d'affichage basée sur la distance lue
             if distance > sensor.max_distance_mm:
                 print(
                     f"{DistanceColor.FAR}Aucun objet détecté dans un rayon de {sensor.max_distance_mm:.2f} mm{DistanceColor.END}")
