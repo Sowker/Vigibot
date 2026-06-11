@@ -138,10 +138,10 @@ class Head:
         self._log.debug("steer → roue=%.1f° pan=%.1f°", wheel_angle, head_angle)
 
     def steer_left(self, intensity: float = STEER_SOFT_DEG) -> None:
-        self.steer(WHEEL_ANGLE_CENTER - intensity)
+        self.steer(WHEEL_ANGLE_CENTER + intensity)
 
     def steer_right(self, intensity: float = STEER_SOFT_DEG) -> None:
-        self.steer(WHEEL_ANGLE_CENTER + intensity)
+        self.steer(WHEEL_ANGLE_CENTER - intensity)
 
     def steer_center(self) -> None:
         self.steer(WHEEL_ANGLE_CENTER)
