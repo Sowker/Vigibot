@@ -7,16 +7,14 @@ ORANGE_GREEN_LEVEL = 0.45
 
 
 class FrontLEDs:
-    """Contrôleur des LEDs avant du robot (onboard + RGB)."""
+    """Contrôleur des LEDs avant du robot."""
     
-    # 3 LED onboard (HAT V3.1) - logique normale : GPIO=1 -> allumee
+    # 3 LEDs sur le HAT V3.1 - logique normale : GPIO=1 -> allumee
     LED1 = 9
     LED2 = 25
     LED3 = 11
     
     # 6 LED RGB des feux avant - logique inversee : GPIO=0 -> allumee
-    # Mapping verifie empiriquement (cf. tests 14/15/16 et 17/18/19) :
-    # cote gauche, le cablage est "tourne" par rapport aux noms des broches
     Left_R = 13
     Left_G = 19
     Left_B = 0
@@ -165,8 +163,7 @@ class FrontLEDs:
 
 if __name__ == "__main__":
     leds = FrontLEDs()
-    leds.start()
-    
+    leds.start()  
     try:
         while True:
             code = input()
