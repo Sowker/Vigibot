@@ -6,7 +6,7 @@ import logger
 
 
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
+from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT
 from t6_line_tracking import LinePosition
 from t11_buzzer_Sirene import POLICE, MII, play
 
@@ -170,22 +170,22 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
                 elif action == LinePosition.TURN_LEFT_SOFT:
                     robot.head.steer_left(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
                     last_turn = -1
 
                 elif action == LinePosition.TURN_RIGHT_SOFT:
                     robot.head.steer_right(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
                     last_turn = 1
 
                 elif action == LinePosition.TURN_LEFT_HARD:
                     robot.head.steer_left(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
                     last_turn = -1
 
                 elif action == LinePosition.TURN_RIGHT_HARD:
                     robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
                     last_turn = 1
 
                 elif action == LinePosition.INTERSECTION:
