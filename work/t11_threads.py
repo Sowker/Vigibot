@@ -129,7 +129,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
     last_turn = 0 # -1 left, 0 None, 1 Right
     # maneuver_state = 0 # 0 init maneuver, 1 running backward wait for line, 2 found line still going backward, 3 begin to loose line
-    END_COUNT_MANEUVER = 20
+    END_COUNT_MANEUVER = 100
     count_maneuver = END_COUNT_MANEUVER # letting time to the maneuver when we are going forward again
 
     while True:
@@ -159,6 +159,9 @@ def thread_controller(robot: Robot, interval: float) -> None:
             last_action = action
 
         if not robot.state.maneuver: # not in maneuver
+            if count_maneuver != END_COUNT_MANEUVER:
+                if (last_turn == -1 and (action == LinePosition.TURN_LEFT_SOFT or action == LinePosition.TURN_LEFT_HARD)) or (last_turn == 1 and (action == LinePosition.TURN_RIGHT_SOFT or action == LinePosition.TURN_RIGHT_HARD)):
+                    count_maneuver = END_COUNT_MANEUVER
             if count_maneuver == END_COUNT_MANEUVER: # letting time to the forward (end) of the maneuver
                 if action == LinePosition.STRAIGHT:
                     robot.head.steer_center()
@@ -191,7 +194,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     last_turn = 0
 
                 else:  # LinePosition.LINE_LOST
-                    print("lose the line, last turn is "+str(last_turn))
+                    log.info("lose the line, last turn is "+str(last_turn))
                     robot.motor.stop()
                     robot.head.steer_center()
                     if last_turn == 0:
@@ -210,7 +213,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
         else: # in maneuver
             if last_turn == -1: # if we were turning left
                 if action == LinePosition.TURN_RIGHT_HARD:
-                    print("LinePosition.TURN_RIGHT_HARD")
+                    log.info("LinePosition.TURN_RIGHT_HARD")
                     robot.head.steer_left(STEER_HARD_DEG)
                     robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
                     robot.state.maneuver = False
@@ -221,7 +224,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
                     robot.state.maneuver = False
                     count_maneuver = 0
-                    print("LinePosition.TURN_LEFT_HARD")
+                    log.info("LinePosition.TURN_LEFT_HARD")
 
 
 
