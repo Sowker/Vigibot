@@ -42,10 +42,9 @@ PIN_LINE_RIGHT         = 17
 class LineTracker:
     """
     Barrette de 3 capteurs infrarouges.
-    Convention : 0 = ligne noire détectée, 1 = sol clair.
+    Convention : 1 = ligne noire détectée, 0 = sol clair.
     """
 
-    # Attribut de classe : partagé, alloué une seule fois en mémoire
     TRUTH_TABLE = {
         (0, 1, 0): LinePosition.STRAIGHT,
         (1, 1, 0): LinePosition.TURN_LEFT_SOFT,
