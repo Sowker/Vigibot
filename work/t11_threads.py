@@ -128,7 +128,8 @@ def thread_controller(robot: Robot, interval: float) -> None:
     last_action: Optional[LinePosition] = None
 
     last_turn = 0 # -1 left, 0 None, 1 Right
-    re_found_line = False
+    # maneuver_state = 0 # 0 init maneuver, 1 running backward wait for line, 2 found line still going backward, 3 begin to loose line
+    backward = False
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -193,21 +194,30 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 # ICI INPUT DE DIRECTION
                 robot.state.maneuver = True
         else:
-            print("In maneuver last turn "+ str(last_turn)+" refund line "+str(re_found_line))
-            if re_found_line == True and action == LinePosition.LINE_LOST: # we loose refound and relost line, act
-                pass
+            if backward == False:
+                if action == LinePosition.LINE_LOST:
+                    if last_turn == 0:
+                        robot.head.steer_center()
+                        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+                        robot.state.maneuver = False
+                    elif last_turn == -1: # if we were turning left
+                        robot.head.steer_right(STEER_HARD_DEG)
+                        robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
+                    elif last_turn == 1: # if we were turning right
+                        robot.head.steer_left(STEER_HARD_DEG)
+                        robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
+                    backward = True
             else:
-                if last_turn == 0:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                elif last_turn == -1: # if we were turning left
-                    robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+                if last_turn == -1: # if we were turning left
+                    if action == LinePosition.TURN_LEFT_HARD or action == LinePosition.TURN_RIGHT_HARD:
+                        robot.head.steer_left(STEER_HARD_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+                        robot.state.maneuver = False
                 elif last_turn == 1: # if we were turning right
-                    robot.head.steer_left(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                re_found_line = True
-                robot.state.maneuver = False # may change the position of this later
+                    if action == LinePosition.TURN_RIGHT_HARD or action == LinePosition.TURN_RIGHT_SOFT:
+                        robot.head.steer_right(STEER_HARD_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+                        robot.state.maneuver = False
 
 
 
