@@ -15,6 +15,19 @@ class LinePosition(IntEnum):
     INTERSECTION    = 5
     LINE_LOST       = 6
 
+    @property
+    def label(self) -> str:
+        translations = {
+            LinePosition.STRAIGHT:        "Tout droit ⬆️",
+            LinePosition.TURN_LEFT_SOFT:  "Tourner à gauche (léger) ↖️",
+            LinePosition.TURN_LEFT_HARD:  "Tourner à gauche (fort) ⬅️",
+            LinePosition.TURN_RIGHT_SOFT: "Tourner à droite (léger) ↗️",
+            LinePosition.TURN_RIGHT_HARD: "Tourner à droite (fort) ➡️",
+            LinePosition.INTERSECTION:    "Intersection / Croisement ➕",
+            LinePosition.LINE_LOST:       "Ligne perdue / En attente ❓",
+        }
+        return translations[self]
+
 
 # ── Constantes ─────────────────────────────────────────────────
 
@@ -23,7 +36,7 @@ PIN_LINE_MIDDLE        = 27
 PIN_LINE_RIGHT         = 17
 
 # ═══════════════════════════════════════════════════════════════════
-#  MATÉRIEL — CAPTEURS DE LIGNE
+#  CAPTEURS DE LIGNE
 # ═══════════════════════════════════════════════════════════════════
 
 class LineTracker:
@@ -74,17 +87,13 @@ class LineTracker:
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Gère l'analyse des arguments de la ligne de commande pour le suivi de ligne.
-
-    Retourne:
-        argparse.Namespace: Les arguments de la ligne de commande analysés.
-    """
+    """Gère l'analyse des arguments de la ligne de commande pour le suivi de ligne."""
     parser = argparse.ArgumentParser(
         description="Script d'automatisation du suivi de ligne pour barrette de capteurs infrarouges (0 = Ligne noire)."
     )
-    parser.add_argument('--left', type=int, default=22, help="Broche GPIO pour le capteur Gauche (par défaut : 22)")
-    parser.add_argument('--middle', type=int, default=27, help="Broche GPIO pour le capteur Milieu (par défaut : 27)")
-    parser.add_argument('--right', type=int, default=17, help="Broche GPIO pour le capteur Droit (par défaut : 17)")
+    parser.add_argument('--left', type=int, default=PIN_LINE_LEFT, help=f"Broche GPIO Gauche (défaut : {PIN_LINE_LEFT})")
+    parser.add_argument('--middle', type=int, default=PIN_LINE_MIDDLE, help=f"Broche GPIO Milieu (défaut : {PIN_LINE_MIDDLE})")
+    parser.add_argument('--right', type=int, default=PIN_LINE_RIGHT, help=f"Broche GPIO Droite (défaut : {PIN_LINE_RIGHT})")
     return parser.parse_args()
 
 
@@ -97,32 +106,11 @@ if __name__ == '__main__':
     try:
         while True:
             status_left, status_middle, status_right = line_tracking.read()
-
-            # Détermination de l'action basée sur les lectures des capteurs
-            if status_left == 1 and status_middle == 0 and status_right == 1:
-                action = "Tout droit"
-
-            elif status_left == 0 and status_middle == 1 and status_right == 1:
-                action = "Tourner à gauche ←"
-
-            elif status_left == 1 and status_middle == 1 and status_right == 0:
-                action = "Tourner à droite →"
-
-            elif status_left == 0 and status_middle == 0 and status_right == 1:
-                action = "Légèrement à gauche (Gauche + Milieu)"
-
-            elif status_left == 1 and status_middle == 0 and status_right == 0:
-                action = "Légèrement à droite (Milieu + Droite)"
-
-            elif status_left == 0 and status_middle == 0 and status_right == 0:
-                action = "Intersection / Croisement"
-
-            else:
-                action = "En attente de la ligne / Perdu..."
-
-            # Affichage des données brutes et de l'action sur une seule ligne
             raw_data = f"(G:{status_left} M:{status_middle} D:{status_right})"
-            print(f"{raw_data:<14} -> {action}")
+            action = line_tracking.read_action()
+
+            # Affichage propre en utilisant la propriété de l'Enum
+            print(f"{raw_data:<14} -> {action.label}")
 
             time.sleep(0.1)
 
