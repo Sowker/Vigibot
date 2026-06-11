@@ -62,7 +62,7 @@ def thread_line(robot: Robot, interval: float) -> None:
                 break
 
         # Capture matérielle et décodage atomique (Hors du Lock pour optimiser)
-        current_action = robot.line_tracker.read_action(switch_sensors=True)
+        current_action = robot.line_tracker.read_action()
 
         with robot.state.lock:
             robot.state.line_action = current_action

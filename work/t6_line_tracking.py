@@ -70,14 +70,12 @@ class LineTracker:
         """Retourne l'état brut instantané (gauche, milieu, droite)."""
         return self._left.value, self._middle.value, self._right.value
 
-    def read_action(self, switch_sensors = False) -> LinePosition:
+    def read_action(self) -> LinePosition:
         """
         Méthode d'instance pratique.
         Lit les capteurs matériels et renvoie directement l'action décodée.
         """
         left, middle, right = self.read()
-        if switch_sensors:
-            return self.decode(right, middle, left)
         return self.decode(left, middle, right)
 
     @staticmethod
