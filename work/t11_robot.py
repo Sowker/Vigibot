@@ -12,7 +12,7 @@ from adafruit_pca9685 import PCA9685
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
+from t4_dc_motor import DCMotor, Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LinePosition, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 from t11_buzzer_Sirene import POLICE, MII, play, close_buzzer

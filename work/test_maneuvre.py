@@ -32,7 +32,7 @@ from t11_robot import Robot
 from t11_threads import thread_ultrasonic, thread_line, thread_LED
 
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
+from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t6_line_tracking import LinePosition
 from t11_buzzer_Sirene import POLICE, play
 
@@ -154,14 +154,14 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
             elif action == LinePosition.TURN_LEFT_HARD:
                 robot.head.steer_left(STEER_HARD_DEG)
-                robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
                 last_turn = -1
                 last_hard = True
                 line_lost_t0 = None
 
             elif action == LinePosition.TURN_RIGHT_HARD:
                 robot.head.steer_right(STEER_HARD_DEG)
-                robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
                 last_turn = 1
                 last_hard = True
                 line_lost_t0 = None
@@ -219,7 +219,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.head.steer_right(STEER_HARD_DEG)
                 else:
                     robot.head.steer_center()
-                robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
                 _set_reversing(False)
 
                 if elapsed >= MANEUVER_CORNER_DURATION_S:
@@ -253,7 +253,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.head.steer_left(STEER_HARD_DEG)
                 else:
                     robot.head.steer_right(STEER_HARD_DEG)
-                robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
                 _set_reversing(False)
 
                 if elapsed >= MANEUVER_FORWARD_DURATION_S:

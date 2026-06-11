@@ -29,7 +29,7 @@ import logging
 import logger
 
 from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
+from t4_dc_motor import DCMotor, Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LinePosition, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 
@@ -236,11 +236,11 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
         elif action == LinePosition.TURN_LEFT_HARD:
             robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD)
 
         elif action == LinePosition.TURN_RIGHT_HARD:
             robot.head.steer_right(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD)
 
         elif action == LinePosition.INTERSECTION:
             robot.head.steer_center()
