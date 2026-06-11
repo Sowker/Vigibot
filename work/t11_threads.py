@@ -23,6 +23,10 @@ LINE_LOST_SOUND = "MII"
 CTRL_INTERVAL_S       = 0.05   # s — période du thread contrôleur
 SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
+# ── Manœuvre de récupération (ligne perdue en plein virage) ────────
+MANEUVER_REVERSE_DURATION_S = 0.4   # recul, braqué du côté opposé au virage
+MANEUVER_FORWARD_DURATION_S = 0.6   # ré-avance + réajustement du bon côté
+
 # ═══════════════════════════════════════════════════════════════════
 #  THREADS
 # ═══════════════════════════════════════════════════════════════════
@@ -127,8 +131,9 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
     last_action: Optional[LinePosition] = None
 
-    last_turn = 0 # -1 left, 0 None, 1 Right
-    re_found_line = False
+    last_turn = 0  # -1 = dernier virage à gauche, 0 = tout droit/inconnu, 1 = droite
+    maneuver_phase = "reverse"  # "reverse" puis "forward", en boucle tant que la ligne n'est pas retrouvée
+    maneuver_t0 = 0.0
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -137,12 +142,15 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 break
             emergency = robot.state.emergency_stop
             action    = robot.state.line_action
-            maneuver = robot.state.maneuver
+            maneuver  = robot.state.maneuver
 
         # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
         if emergency:
             robot.motor.stop()
             robot.head.steer_center()
+            with robot.state.lock:
+                robot.state.driving  = False
+                robot.state.maneuver = False
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             time.sleep(interval)
             continue
@@ -156,7 +164,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 log.info("Intersection détectée — passage tout droit")
             last_action = action
 
-        if not robot.state.maneuver:
+        if not maneuver:
             if action == LinePosition.STRAIGHT:
                 robot.head.steer_center()
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
@@ -187,31 +195,59 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
                 last_turn = 0
 
-            else:  # LinePosition.LINE_LOST
-                robot.motor.stop()
-                robot.head.steer_center()
-                # ICI INPUT DE DIRECTION
-                robot.state.maneuver = True
-        else:
-            if action == LinePosition.LINE_LOST:
-                if re_found_line == True:
-                    pass # we loose refound and relost line, act
-                else:
-                    pass # nothing to do, continue the maneuver
-            else:
-                if last_turn == 0:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                elif last_turn == -1: # if we were turning left
+            else:  # LinePosition.LINE_LOST -> démarrage de la manœuvre de récupération
+                log.warning("Démarrage manœuvre de récupération (dernier virage=%s)",
+                             {-1: "gauche", 0: "inconnu", 1: "droite"}[last_turn])
+                maneuver_phase = "reverse"
+                maneuver_t0 = time.monotonic()
+                with robot.state.lock:
+                    robot.state.maneuver = True
+
+            with robot.state.lock:
+                robot.state.driving = action != LinePosition.LINE_LOST
+
+        else:  # ── Manœuvre de récupération en cours ─────────────
+            if action != LinePosition.LINE_LOST:
+                # Ligne retrouvée -> fin de la manœuvre, le tour suivant
+                # reprend le suivi normal avec la nouvelle action lue.
+                log.info("Ligne retrouvée — fin de la manœuvre")
+                with robot.state.lock:
+                    robot.state.maneuver = False
+                    robot.state.driving  = False
+                continue
+
+            elapsed = time.monotonic() - maneuver_t0
+
+            if maneuver_phase == "reverse":
+                # Recul, roue braquée du côté OPPOSÉ au virage en cours
+                if last_turn == -1:
                     robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                elif last_turn == 1: # if we were turning right
+                elif last_turn == 1:
                     robot.head.steer_left(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                re_found_line = True
-                robot.state.maneuver = False # may change the position of this later
+                else:
+                    robot.head.steer_center()
+                robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
 
+                if elapsed >= MANEUVER_REVERSE_DURATION_S:
+                    maneuver_phase = "forward"
+                    maneuver_t0 = time.monotonic()
 
+            else:  # "forward" — ré-avance + réajustement du bon côté
+                if last_turn == -1:
+                    robot.head.steer_left(STEER_HARD_DEG)
+                elif last_turn == 1:
+                    robot.head.steer_right(STEER_HARD_DEG)
+                else:
+                    robot.head.steer_center()
+                robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
+
+                if elapsed >= MANEUVER_FORWARD_DURATION_S:
+                    # Toujours pas de ligne -> on retente un cycle recul/avance
+                    maneuver_phase = "reverse"
+                    maneuver_t0 = time.monotonic()
+
+            with robot.state.lock:
+                robot.state.driving = False
 
         time.sleep(interval)
 
