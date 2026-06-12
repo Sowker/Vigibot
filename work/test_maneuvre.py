@@ -12,8 +12,8 @@
 ║        - "forward" : ré-avance + réajustement du bon côté.         ║
 ║      Si la direction du virage est inconnue, alterne le côté       ║
 ║      testé (gauche/droite) à chaque cycle reverse/forward.         ║
-║    • Buzzer : silence en roulage normal, POLICE uniquement         ║
-║      pendant la phase de recul ("marche arrière").                 ║
+║    • Buzzer : silence en roulage normal et en manœuvre, POLICE     ║
+║      uniquement en cas d'obstacle (arrêt d'urgence).               ║
 ║    • Marge de sécurité accrue sur le capteur d'obstacle.           ║
 ╚════════════════════════════════════════════════════════════════════╝
 """
@@ -53,18 +53,20 @@ OBSTACLE_MARGIN_MM = 250.0
 
 
 # ── État partagé minimal entre thread_controller et thread_buzzer ──
-class _ManeuverAudio:
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.reversing = False  # True uniquement pendant la phase "reverse" (marche arrière)
-
-
-_maneuver_audio = _ManeuverAudio()
-
-
-def _set_reversing(value: bool) -> None:
-    with _maneuver_audio.lock:
-        _maneuver_audio.reversing = value
+# (désactivé : plus de son POLICE pendant le recul, donc plus besoin
+#  de signaler la phase "reverse" au thread_buzzer)
+# class _ManeuverAudio:
+#     def __init__(self):
+#         self.lock = threading.Lock()
+#         self.reversing = False  # True uniquement pendant la phase "reverse" (marche arrière)
+#
+#
+# _maneuver_audio = _ManeuverAudio()
+#
+#
+# def _set_reversing(value: bool) -> None:
+#     with _maneuver_audio.lock:
+#         _maneuver_audio.reversing = value
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -115,7 +117,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
             with robot.state.lock:
                 robot.state.driving  = False
                 robot.state.maneuver = False
-            _set_reversing(False)
+            # _set_reversing(False)
             line_lost_t0 = None
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             time.sleep(interval)
@@ -206,7 +208,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 with robot.state.lock:
                     robot.state.maneuver = False
                     robot.state.driving  = False
-                _set_reversing(False)
+                # _set_reversing(False)
                 continue
 
             elapsed = time.monotonic() - maneuver_t0
@@ -220,7 +222,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 else:
                     robot.head.steer_center()
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                _set_reversing(False)
+                # _set_reversing(False)
 
                 if elapsed >= MANEUVER_CORNER_DURATION_S:
                     maneuver_phase = "reverse"
@@ -238,7 +240,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 else:
                     robot.head.steer_left(STEER_HARD_DEG)
                 robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                _set_reversing(True)
+                # _set_reversing(True)
 
                 if elapsed >= MANEUVER_REVERSE_DURATION_S:
                     maneuver_phase = "forward"
@@ -254,7 +256,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 else:
                     robot.head.steer_right(STEER_HARD_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                _set_reversing(False)
+                # _set_reversing(False)
 
                 if elapsed >= MANEUVER_FORWARD_DURATION_S:
                     # Toujours pas de ligne -> on retente un cycle recul/avance
@@ -277,9 +279,8 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
 def thread_buzzer(robot: Robot) -> None:
     """
-    - Obstacle (emergency_stop)              -> sirène POLICE
-    - Manœuvre, phase "reverse" (marche AR)  -> sirène POLICE
-    - Sinon (roulage normal, manœuvre avant, à l'arrêt) -> silence
+    - Obstacle (emergency_stop) -> sirène POLICE
+    - Sinon (roulage normal, manœuvre, à l'arrêt) -> silence
     """
     log = logger.get_logger("BUZZER")
     log.info("Thread démarré")
@@ -288,29 +289,29 @@ def thread_buzzer(robot: Robot) -> None:
         with robot.state.lock:
             return robot.state.running and robot.state.emergency_stop
 
-    def reversing_active() -> bool:
-        with robot.state.lock:
-            if not (robot.state.running and robot.state.maneuver and not robot.state.emergency_stop):
-                return False
-        with _maneuver_audio.lock:
-            return _maneuver_audio.reversing
+    # def reversing_active() -> bool:
+    #     with robot.state.lock:
+    #         if not (robot.state.running and robot.state.maneuver and not robot.state.emergency_stop):
+    #             return False
+    #     with _maneuver_audio.lock:
+    #         return _maneuver_audio.reversing
 
     while True:
         with robot.state.lock:
             running   = robot.state.running
             emergency = robot.state.emergency_stop
-            maneuver  = robot.state.maneuver
+            # maneuver  = robot.state.maneuver
 
         if not running:
             break
 
-        with _maneuver_audio.lock:
-            reversing = _maneuver_audio.reversing
+        # with _maneuver_audio.lock:
+        #     reversing = _maneuver_audio.reversing
 
         if emergency:
             play(POLICE, emergency_active)
-        elif maneuver and reversing:
-            play(POLICE, reversing_active)
+        # elif maneuver and reversing:
+        #     play(POLICE, reversing_active)
         else:
             time.sleep(SENSOR_INTERVAL_S)
 
