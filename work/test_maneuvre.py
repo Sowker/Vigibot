@@ -41,11 +41,11 @@ from t11_buzzer_Sirene import POLICE, play
 SENSOR_INTERVAL_S = 0.05   # s — période des threads capteurs
 
 # ── Ligne perdue / lignes pointillées ───────────────────────────────
-LINE_LOST_DEBOUNCE_S = 0.025   # tolérance avant de déclarer la ligne réellement perdue
+LINE_LOST_DEBOUNCE_S = 0.12   # tolérance avant de déclarer la ligne réellement perdue
 
 # ── Manœuvre de récupération (ligne perdue en plein virage) ─────────
 MANEUVER_REVERSE_MAX_S   = 1.0   # recul tout droit max, jusqu'à retrouver la ligne
-MANEUVER_TEST_DURATION_S = 0.5   # pivot pour confirmer/trouver la suite côté testé
+MANEUVER_TEST_DURATION_S = 0.8   # pivot pour confirmer/trouver la suite côté testé
 
 # ── Obstacle ─────────────────────────────────────────────────────────
 # Marge augmentée : le temps de réaction du capteur + la rampe d'arrêt
@@ -101,6 +101,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
     maneuver_t0 = 0.0
     side_test = 0   # 0/1 — alterne le 1er côté testé d'une manœuvre à l'autre quand la direction est inconnue
     test_side = 1   # -1 = gauche, 1 = droite — côté testé pendant la manœuvre en cours
+
+    # Angle de roue à utiliser pendant le recul : 0 = centré (recul tout
+    # droit, 1er recul après une ligne perdue normalement), -1/1 = même
+    # côté qu'un test raté, pour dérouler la courbe en sens inverse et
+    # revenir au point de départ de ce test.
+    reverse_steer_side = 0
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -188,6 +194,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     log.warning("Démarrage manœuvre — recul jusqu'à la ligne (dernier virage=%s)",
                                  {-1: "gauche", 0: "inconnu", 1: "droite"}[last_turn])
                     maneuver_phase = "reverse"
+                    reverse_steer_side = 0  # recul tout droit, on revient sur la trajectoire suivie
                     maneuver_t0 = now
                     line_lost_t0 = None
                     with robot.state.lock:
@@ -201,10 +208,17 @@ def thread_controller(robot: Robot, interval: float) -> None:
             elapsed = time.monotonic() - maneuver_t0
 
             if maneuver_phase == "reverse":
-                # Recul tout droit jusqu'à retrouver la ligne, c'est-à-dire
-                # revenir à l'endroit où elle a été perdue (avec une limite
-                # de sécurité pour ne pas reculer indéfiniment).
-                robot.head.steer_center()
+                # Recul jusqu'à retrouver la ligne, c'est-à-dire revenir au
+                # point de départ (avec une limite de sécurité pour ne pas
+                # reculer indéfiniment). Roues centrées pour le 1er recul
+                # (on revient sur la trajectoire suivie), ou braquées du
+                # même côté qu'un test raté (on déroule sa courbe à l'envers).
+                if reverse_steer_side < 0:
+                    robot.head.steer_left(STEER_HARD_DEG)
+                elif reverse_steer_side > 0:
+                    robot.head.steer_right(STEER_HARD_DEG)
+                else:
+                    robot.head.steer_center()
                 robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
 
                 if action != LinePosition.LINE_LOST or elapsed >= MANEUVER_REVERSE_MAX_S:
@@ -219,8 +233,9 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
 
                 if action == LinePosition.LINE_LOST:
-                    # Ce côté ne donne rien -> on recule de nouveau et on
-                    # teste l'autre côté.
+                    # Ce côté ne donne rien -> on recule en déroulant la même
+                    # courbe à l'envers, puis on teste l'autre côté.
+                    reverse_steer_side = test_side
                     test_side = -test_side
                     maneuver_phase = "reverse"
                     maneuver_t0 = time.monotonic()
