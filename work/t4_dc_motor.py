@@ -16,8 +16,8 @@ CHANNEL_MOTOR_IN1        = 15  # Moteur DC pôle +
 CHANNEL_MOTOR_IN2        = 14  # Moteur DC pôle −
 
 SPEED_NORMAL_PCT      = 40   # % puissance — ligne droite
-SPEED_TURNING_PCT     = 25   # % puissance — virage doux
-SPEED_SLOW_PCT        = 30   # % puissance — virage serré
+SPEED_TURNING_PCT     = 35   # % puissance — virage doux
+SPEED_SLOW_PCT        = 35   # % puissance — virage serré
 
 class Direction(IntEnum):
     """Sens de marche du moteur DC."""
