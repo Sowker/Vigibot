@@ -205,11 +205,13 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     elif last_turn == -1:  # if we were turning left
                         robot.head.steer_right(STEER_HARD_DEG)
                         robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
+                        with robot.state.lock:
+                            robot.state.maneuver = True
                     elif last_turn == 1:  # if we were turning right
                         robot.head.steer_left(STEER_HARD_DEG)
                         robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
-                    with robot.state.lock:
-                        robot.state.maneuver = True
+                        with robot.state.lock:
+                            robot.state.maneuver = True
             else:
                 count_maneuver += 1
         else: # in maneuver
