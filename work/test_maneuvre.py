@@ -5,13 +5,15 @@
 ╠════════════════════════════════════════════════════════════════════╣
 ║  Variante de t11_line_following.py :                               ║
 ║    • Tolère les lignes pointillées (debounce avant manœuvre).      ║
-║    • Manœuvre de récupération en plusieurs phases :                ║
-║        - "corner"  : pivot serré côté du dernier virage (angle     ║
-║                       droit) avant de tenter le recul.             ║
-║        - "reverse" : recul, braqué du côté opposé au virage.       ║
-║        - "forward" : ré-avance + réajustement du bon côté.         ║
-║      Si la direction du virage est inconnue, alterne le côté       ║
-║      testé (gauche/droite) à chaque cycle reverse/forward.         ║
+║    • Manœuvre de récupération en 2 phases :                        ║
+║        - "reverse" : recul tout droit jusqu'à retrouver la ligne   ║
+║                       (= revenir à l'endroit où elle a été         ║
+║                       perdue), avec une limite de sécurité.        ║
+║        - "test"    : une fois la ligne retrouvée, pivot serré      ║
+║                       côté du dernier virage pour trouver la       ║
+║                       suite du parcours (angle droit, etc.).       ║
+║      Si ce côté ne donne rien, on recule de nouveau et on teste    ║
+║      l'autre côté.                                                  ║
 ║    • Buzzer : silence en roulage normal et en manœuvre, POLICE     ║
 ║      uniquement en cas d'obstacle (arrêt d'urgence).               ║
 ║    • Marge de sécurité accrue sur le capteur d'obstacle.           ║
@@ -42,9 +44,8 @@ SENSOR_INTERVAL_S = 0.05   # s — période des threads capteurs
 LINE_LOST_DEBOUNCE_S = 0.015   # tolérance avant de déclarer la ligne réellement perdue
 
 # ── Manœuvre de récupération (ligne perdue en plein virage) ─────────
-MANEUVER_CORNER_DURATION_S  = 0.5   # pivot serré côté virage (angle droit) avant de reculer
-MANEUVER_REVERSE_DURATION_S = 0.4   # recul, braqué du côté opposé au virage
-MANEUVER_FORWARD_DURATION_S = 0.6   # ré-avance + réajustement du bon côté
+MANEUVER_REVERSE_MAX_S   = 1.0   # recul tout droit max, jusqu'à retrouver la ligne
+MANEUVER_TEST_DURATION_S = 0.5   # pivot pour confirmer/trouver la suite côté testé
 
 # ── Obstacle ─────────────────────────────────────────────────────────
 # Marge augmentée : le temps de réaction du capteur + la rampe d'arrêt
@@ -78,34 +79,28 @@ def thread_controller(robot: Robot, interval: float) -> None:
     Boucle de décision : lit l'action synthétisée, décide et pilote les moteurs.
 
     Manœuvre de récupération quand la ligne est perdue :
-      1. "corner"  (uniquement si le dernier virage était HARD, donc
-                    probable angle droit) : pivot serré en avant, côté
-                    du dernier virage.
-      2. "reverse" : recul, braqué du côté opposé au virage.
-      3. "forward" : ré-avance, braqué du côté du virage.
-      4. Si toujours pas de ligne après "forward", on retente un cycle
-         reverse/forward. Si la direction du virage était inconnue
-         (last_turn == 0), le côté testé est inversé à chaque cycle.
+      1. "reverse" : recul tout droit jusqu'à retrouver la ligne, c'est-à-dire
+                      jusqu'à revenir à l'endroit où elle a été perdue (avec
+                      une limite de sécurité MANEUVER_REVERSE_MAX_S).
+      2. "test"    : une fois la ligne retrouvée, pivot serré vers le côté
+                      testé (priorité au côté du dernier virage) pour
+                      trouver la suite du parcours. Si ce côté ne donne
+                      rien (ligne reperdue), on recule à nouveau et on
+                      teste l'autre côté.
     """
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     last_action: Optional[LinePosition] = None
 
-    last_turn = 0      # -1 = dernier virage à gauche, 0 = tout droit/inconnu, 1 = droite
-    last_hard = False  # True si le dernier virage avant la perte de ligne était HARD
+    last_turn = 0  # -1 = dernier virage à gauche, 0 = tout droit/inconnu, 1 = droite
 
     line_lost_t0: Optional[float] = None  # debounce anti lignes pointillées
 
-    maneuver_phase = "reverse"  # "corner" -> "reverse" -> "forward" -> ("reverse" -> "forward" ...)
+    maneuver_phase = "reverse"  # "reverse" -> "test" -> ("reverse" -> "test" ...)
     maneuver_t0 = 0.0
-    side_test = 0  # 0/1 — côté testé en cycle quand last_turn == 0 (inconnu)
-
-    # Temps passé à avancer "à l'aveugle" (debounce + phases corner/forward)
-    # depuis la dernière fois qu'on a reculé : la prochaine phase "reverse"
-    # recule d'autant plus longtemps pour compenser.
-    extra_reverse_s = 0.0
-    reverse_duration_s = MANEUVER_REVERSE_DURATION_S
+    side_test = 0   # 0/1 — alterne le 1er côté testé d'une manœuvre à l'autre quand la direction est inconnue
+    test_side = 1   # -1 = gauche, 1 = droite — côté testé pendant la manœuvre en cours
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -139,73 +134,60 @@ def thread_controller(robot: Robot, interval: float) -> None:
             last_action = action
 
         if not maneuver:
-            if action != LinePosition.LINE_LOST:
-                # Ligne retrouvée avant manœuvre -> pas de dette à compenser
-                extra_reverse_s = 0.0
-
             if action == LinePosition.STRAIGHT:
                 robot.head.steer_center()
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
                 last_turn = 0
-                last_hard = False
                 line_lost_t0 = None
 
             elif action == LinePosition.TURN_LEFT_SOFT:
                 robot.head.steer_left(STEER_SOFT_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
                 last_turn = -1
-                last_hard = False
                 line_lost_t0 = None
 
             elif action == LinePosition.TURN_RIGHT_SOFT:
                 robot.head.steer_right(STEER_SOFT_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
                 last_turn = 1
-                last_hard = False
                 line_lost_t0 = None
 
             elif action == LinePosition.TURN_LEFT_HARD:
                 robot.head.steer_left(STEER_HARD_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
                 last_turn = -1
-                last_hard = True
                 line_lost_t0 = None
 
             elif action == LinePosition.TURN_RIGHT_HARD:
                 robot.head.steer_right(STEER_HARD_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
                 last_turn = 1
-                last_hard = True
                 line_lost_t0 = None
 
             elif action == LinePosition.INTERSECTION:
                 robot.head.steer_center()
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
                 last_turn = 0
-                last_hard = False
                 line_lost_t0 = None
 
             else:  # LinePosition.LINE_LOST
                 now = time.monotonic()
-                # Pendant le debounce, le robot continue sur sa lancée
-                # (avance) -> ce temps sera rendu lors du prochain recul.
-                extra_reverse_s += interval
                 if line_lost_t0 is None:
                     # Première détection : on patiente (ligne pointillée ?)
                     # sans toucher moteur/direction.
                     line_lost_t0 = now
                 elif now - line_lost_t0 >= LINE_LOST_DEBOUNCE_S:
                     # Perte confirmée -> démarrage de la manœuvre de récupération
-                    if last_hard:
-                        maneuver_phase = "corner"
-                        log.warning("Démarrage manœuvre — pivot angle droit côté %s",
-                                     "gauche" if last_turn == -1 else "droite")
+                    # Priorité au côté du dernier virage ; sinon on alterne
+                    # le côté testé d'une manœuvre à l'autre.
+                    if last_turn != 0:
+                        test_side = last_turn
                     else:
-                        maneuver_phase = "reverse"
-                        reverse_duration_s = MANEUVER_REVERSE_DURATION_S + extra_reverse_s
-                        extra_reverse_s = 0.0
-                        log.warning("Démarrage manœuvre de récupération (dernier virage=%s)",
-                                     {-1: "gauche", 0: "inconnu", 1: "droite"}[last_turn])
+                        test_side = 1 if side_test == 0 else -1
+                        side_test = 1 - side_test
+                    log.warning("Démarrage manœuvre — recul jusqu'à la ligne (dernier virage=%s)",
+                                 {-1: "gauche", 0: "inconnu", 1: "droite"}[last_turn])
+                    maneuver_phase = "reverse"
                     maneuver_t0 = now
                     line_lost_t0 = None
                     with robot.state.lock:
@@ -216,77 +198,38 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 robot.state.driving = action != LinePosition.LINE_LOST
 
         else:  # ── Manœuvre de récupération en cours ─────────────
-            if action != LinePosition.LINE_LOST:
-                # Ligne retrouvée -> fin de la manœuvre, le tour suivant
-                # reprend le suivi normal avec la nouvelle action lue.
-                log.info("Ligne retrouvée — fin de la manœuvre")
-                with robot.state.lock:
-                    robot.state.maneuver = False
-                    robot.state.driving  = False
-                # _set_reversing(False)
-                extra_reverse_s = 0.0
-                continue
-
             elapsed = time.monotonic() - maneuver_t0
 
-            if maneuver_phase == "corner":
-                # Pivot serré en avant, côté du dernier virage (angle droit)
-                if last_turn == -1:
-                    robot.head.steer_left(STEER_HARD_DEG)
-                elif last_turn == 1:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                else:
-                    robot.head.steer_center()
-                robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                # _set_reversing(False)
-                extra_reverse_s += interval
-
-                if elapsed >= MANEUVER_CORNER_DURATION_S:
-                    maneuver_phase = "reverse"
-                    reverse_duration_s = MANEUVER_REVERSE_DURATION_S + extra_reverse_s
-                    extra_reverse_s = 0.0
-                    maneuver_t0 = time.monotonic()
-
-            elif maneuver_phase == "reverse":
-                # Recul, roue braquée du côté OPPOSÉ au virage en cours
-                # (ou côté testé si la direction du virage est inconnue)
-                if last_turn == -1:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                elif last_turn == 1:
-                    robot.head.steer_left(STEER_HARD_DEG)
-                elif side_test == 0:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                else:
-                    robot.head.steer_left(STEER_HARD_DEG)
+            if maneuver_phase == "reverse":
+                # Recul tout droit jusqu'à retrouver la ligne, c'est-à-dire
+                # revenir à l'endroit où elle a été perdue (avec une limite
+                # de sécurité pour ne pas reculer indéfiniment).
+                robot.head.steer_center()
                 robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-                # _set_reversing(True)
 
-                if elapsed >= reverse_duration_s:
-                    maneuver_phase = "forward"
+                if action != LinePosition.LINE_LOST or elapsed >= MANEUVER_REVERSE_MAX_S:
+                    maneuver_phase = "test"
                     maneuver_t0 = time.monotonic()
 
-            else:  # "forward" — ré-avance + réajustement du bon côté
-                if last_turn == -1:
-                    robot.head.steer_left(STEER_HARD_DEG)
-                elif last_turn == 1:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                elif side_test == 0:
+            else:  # "test" — pivot serré côté testé pour trouver la suite
+                if test_side < 0:
                     robot.head.steer_left(STEER_HARD_DEG)
                 else:
                     robot.head.steer_right(STEER_HARD_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
-                # _set_reversing(False)
-                extra_reverse_s += interval
 
-                if elapsed >= MANEUVER_FORWARD_DURATION_S:
-                    # Toujours pas de ligne -> on retente un cycle recul/avance
+                if action == LinePosition.LINE_LOST:
+                    # Ce côté ne donne rien -> on recule de nouveau et on
+                    # teste l'autre côté.
+                    test_side = -test_side
                     maneuver_phase = "reverse"
-                    reverse_duration_s = MANEUVER_REVERSE_DURATION_S + extra_reverse_s
-                    extra_reverse_s = 0.0
                     maneuver_t0 = time.monotonic()
-                    if last_turn == 0:
-                        # Direction inconnue : on inverse le côté testé
-                        side_test = 1 - side_test
+                elif elapsed >= MANEUVER_TEST_DURATION_S:
+                    # Ligne retrouvée et stable -> fin de la manœuvre, le
+                    # tour suivant reprend le suivi normal.
+                    log.info("Ligne retrouvée — fin de la manœuvre")
+                    with robot.state.lock:
+                        robot.state.maneuver = False
 
             with robot.state.lock:
                 robot.state.driving = False
