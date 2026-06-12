@@ -39,7 +39,7 @@ from t11_buzzer_Sirene import POLICE, play
 SENSOR_INTERVAL_S = 0.05   # s — période des threads capteurs
 
 # ── Ligne perdue / lignes pointillées ───────────────────────────────
-LINE_LOST_DEBOUNCE_S = 0.05   # tolérance avant de déclarer la ligne réellement perdue
+LINE_LOST_DEBOUNCE_S = 0.015   # tolérance avant de déclarer la ligne réellement perdue
 
 # ── Manœuvre de récupération (ligne perdue en plein virage) ─────────
 MANEUVER_CORNER_DURATION_S  = 0.5   # pivot serré côté virage (angle droit) avant de reculer
@@ -101,6 +101,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
     maneuver_t0 = 0.0
     side_test = 0  # 0/1 — côté testé en cycle quand last_turn == 0 (inconnu)
 
+    # Temps passé à avancer "à l'aveugle" (debounce + phases corner/forward)
+    # depuis la dernière fois qu'on a reculé : la prochaine phase "reverse"
+    # recule d'autant plus longtemps pour compenser.
+    extra_reverse_s = 0.0
+    reverse_duration_s = MANEUVER_REVERSE_DURATION_S
+
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
         with robot.state.lock:
@@ -133,6 +139,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
             last_action = action
 
         if not maneuver:
+            if action != LinePosition.LINE_LOST:
+                # Ligne retrouvée avant manœuvre -> pas de dette à compenser
+                extra_reverse_s = 0.0
+
             if action == LinePosition.STRAIGHT:
                 robot.head.steer_center()
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
@@ -177,6 +187,9 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
             else:  # LinePosition.LINE_LOST
                 now = time.monotonic()
+                # Pendant le debounce, le robot continue sur sa lancée
+                # (avance) -> ce temps sera rendu lors du prochain recul.
+                extra_reverse_s += interval
                 if line_lost_t0 is None:
                     # Première détection : on patiente (ligne pointillée ?)
                     # sans toucher moteur/direction.
@@ -189,6 +202,8 @@ def thread_controller(robot: Robot, interval: float) -> None:
                                      "gauche" if last_turn == -1 else "droite")
                     else:
                         maneuver_phase = "reverse"
+                        reverse_duration_s = MANEUVER_REVERSE_DURATION_S + extra_reverse_s
+                        extra_reverse_s = 0.0
                         log.warning("Démarrage manœuvre de récupération (dernier virage=%s)",
                                      {-1: "gauche", 0: "inconnu", 1: "droite"}[last_turn])
                     maneuver_t0 = now
@@ -209,6 +224,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.state.maneuver = False
                     robot.state.driving  = False
                 # _set_reversing(False)
+                extra_reverse_s = 0.0
                 continue
 
             elapsed = time.monotonic() - maneuver_t0
@@ -223,9 +239,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.head.steer_center()
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
                 # _set_reversing(False)
+                extra_reverse_s += interval
 
                 if elapsed >= MANEUVER_CORNER_DURATION_S:
                     maneuver_phase = "reverse"
+                    reverse_duration_s = MANEUVER_REVERSE_DURATION_S + extra_reverse_s
+                    extra_reverse_s = 0.0
                     maneuver_t0 = time.monotonic()
 
             elif maneuver_phase == "reverse":
@@ -242,7 +261,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
                 # _set_reversing(True)
 
-                if elapsed >= MANEUVER_REVERSE_DURATION_S:
+                if elapsed >= reverse_duration_s:
                     maneuver_phase = "forward"
                     maneuver_t0 = time.monotonic()
 
@@ -257,10 +276,13 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.head.steer_right(STEER_HARD_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_SLOW_PCT, fast_accel=True)
                 # _set_reversing(False)
+                extra_reverse_s += interval
 
                 if elapsed >= MANEUVER_FORWARD_DURATION_S:
                     # Toujours pas de ligne -> on retente un cycle recul/avance
                     maneuver_phase = "reverse"
+                    reverse_duration_s = MANEUVER_REVERSE_DURATION_S + extra_reverse_s
+                    extra_reverse_s = 0.0
                     maneuver_t0 = time.monotonic()
                     if last_turn == 0:
                         # Direction inconnue : on inverse le côté testé
