@@ -164,6 +164,8 @@ def thread_controller(robot: Robot, interval: float) -> None:
         robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         time.sleep(sleep_time)
 
+        robot.motor.stop()
+        robot.head.steer_center()
         time.sleep(20)
 
         time.sleep(interval)
