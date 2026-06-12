@@ -39,7 +39,7 @@ from t11_buzzer_Sirene import POLICE, play
 SENSOR_INTERVAL_S = 0.05   # s — période des threads capteurs
 
 # ── Ligne perdue / lignes pointillées ───────────────────────────────
-LINE_LOST_DEBOUNCE_S = 0.15   # tolérance avant de déclarer la ligne réellement perdue
+LINE_LOST_DEBOUNCE_S = 0.05   # tolérance avant de déclarer la ligne réellement perdue
 
 # ── Manœuvre de récupération (ligne perdue en plein virage) ─────────
 MANEUVER_CORNER_DURATION_S  = 0.5   # pivot serré côté virage (angle droit) avant de reculer
