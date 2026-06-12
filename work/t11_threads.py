@@ -1,46 +1,60 @@
+from logging import lastResort
+
 import time
 from typing import Optional
 
 from t11_robot import Robot
 import logger
 
-
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
 from t6_line_tracking import LinePosition
 from t11_buzzer_Sirene import POLICE, MII, play
 
-# Constantes
+# ===================================================================
+# Constantes de configuration
+# ===================================================================
 
 # ── Buzzer ─────────────────────────────────────────────────────────
-# Son joué pendant les manœuvres de récupération (recul + virage quand
-# la ligne est perdue) :
+# Son joué pendant les manœuvres de récupération (recul + virage quand la ligne est perdue) :
 #   None      -> silence
 #   "MII"     -> thème MII (comme en roulage normal)
 #   "POLICE"  -> sirène POLICE (comme en urgence obstacle)
 LINE_LOST_SOUND = "MII"
 
-CTRL_INTERVAL_S       = 0.05   # s — période du thread contrôleur
-SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
+# ── Temporisations ─────────────────────────────────────────────────
+TIME_LOST = 0.5  # Temps d'attente/délai avant de réagir à la perte de ligne
+TIME_POST_MANUVER = 0.10  # Temps alloué pour se stabiliser après avoir retrouvé la ligne
 
-# ═══════════════════════════════════════════════════════════════════
-#  THREADS
-# ═══════════════════════════════════════════════════════════════════
+CTRL_INTERVAL_S = 0.05  # s — période du thread contrôleur (cerveau)
+SENSOR_INTERVAL_S = 0.05  # s — période des threads capteurs (yeux/oreilles)
+
+
+# ===================================================================
+#  THREADS (Tâches exécutées en parallèle)
+# ===================================================================
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
-    """Lit le capteur ultrason en boucle et met à jour RobotState."""
+    """
+    Lit le capteur ultrason en boucle pour détecter les obstacles.
+    Met à jour l'état d'urgence du robot si un objet est trop près.
+    """
     log = logger.get_logger("US")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     while True:
+        # Vérifie si le robot est toujours censé fonctionner
         with robot.state.lock:
             if not robot.state.running:
                 break
 
+        # Lecture de la distance de l'obstacle en millimètres
         dist_mm = robot.ultrasonic.read_mm()
 
+        # Mise à jour sécurisée de l'état global du robot
         with robot.state.lock:
-            robot.state.distance_mm    = dist_mm
+            robot.state.distance_mm = dist_mm
+            # Déclenche l'arrêt d'urgence si la distance est sous le seuil critique
             robot.state.emergency_stop = dist_mm < robot._obstacle_threshold_mm
 
         time.sleep(interval)
@@ -50,8 +64,8 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
 
 def thread_line(robot: Robot, interval: float) -> None:
     """
-    Lit l'action décodée des capteurs en boucle (via read_action)
-    et met à jour directement l'action sur le RobotState.
+    Surveille en permanence les capteurs de ligne sous le robot.
+    Traduit les lectures physiques en actions (ex: tourner à gauche, tout droit).
     """
     log = logger.get_logger("LINE")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
@@ -61,9 +75,10 @@ def thread_line(robot: Robot, interval: float) -> None:
             if not robot.state.running:
                 break
 
-        # Capture matérielle et décodage atomique (Hors du Lock pour optimiser)
+        # Capture matérielle hors du "lock" pour ne pas bloquer les autres threads
         current_action = robot.line_tracker.read_action()
 
+        # Enregistre la position de la ligne dans l'état du robot
         with robot.state.lock:
             robot.state.line_action = current_action
 
@@ -71,43 +86,45 @@ def thread_line(robot: Robot, interval: float) -> None:
 
     log.info("Thread arrêté")
 
+
 def thread_LED(robot: Robot, interval: float):
     """
-    Pilote les LEDs arrière (WS2812) ET les LEDs avant en parallèle :
-    - Obstacle (priorité 1) ou ligne perdue -> warning (avant + arrière)
-    - Virage gauche/droite -> clignotant correspondant (avant + arrière)
-    - Tout droit / intersection -> extinction des deux
+    Gère la signalisation visuelle du robot selon son état :
+    - Arrêt d'urgence ou ligne perdue -> Feux de détresse (Warning)
+    - Virages -> Clignotant correspondant
+    - Ligne droite -> LEDs éteintes
     """
     log = logger.get_logger("LED")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
-    last_front_state = None  # 'left', 'right', 'warning' ou None
+    last_front_state = None  # Mémorise le dernier état pour éviter les appels redondants
 
     while True:
         with robot.state.lock:
             if not robot.state.running:
                 break
-            action    = robot.state.line_action
+            action = robot.state.line_action
             emergency = robot.state.emergency_stop
 
+        # Définition de l'état visuel en fonction des priorités
         if emergency:
             target_state = 'warning'
             robot.led.warning()
-        elif action == LinePosition.TURN_LEFT_SOFT or action == LinePosition.TURN_LEFT_HARD:
+        elif action in (LinePosition.TURN_LEFT_SOFT, LinePosition.TURN_LEFT_HARD):
             target_state = 'left'
             robot.led.clignotant_gauche()
-        elif action == LinePosition.TURN_RIGHT_SOFT or action == LinePosition.TURN_RIGHT_HARD:
+        elif action in (LinePosition.TURN_RIGHT_SOFT, LinePosition.TURN_RIGHT_HARD):
             target_state = 'right'
             robot.led.clignotant_droit()
         elif action == LinePosition.LINE_LOST:
             target_state = 'warning'
             robot.led.warning()
-        else:  # STRAIGHT / INTERSECTION
+        else:  # Ligne droite ou Intersection
             target_state = None
             robot.led.arreter_clignotants()
             robot.led.arreter_warning()
 
-        # front_leds.set_blink() est un toggle -> ne l'appeler que sur changement d'état
+        # Mise à jour des LEDs avant uniquement si l'état a changé
         if target_state != last_front_state:
             robot.front_leds.set_blink(target_state)
             last_front_state = target_state
@@ -120,36 +137,39 @@ def thread_LED(robot: Robot, interval: float):
 
 def thread_controller(robot: Robot, interval: float) -> None:
     """
-    Boucle de décision : lit l'action synthétisée, décide et pilote les moteurs.
+    Le "cerveau" du robot. Boucle de décision principale :
+    Analyse les informations des capteurs et donne les ordres aux moteurs de direction et de propulsion.
     """
-    log  = logger.get_logger("CTRL")
+    log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     last_action: Optional[LinePosition] = None
 
-    last_turn = 0 # -1 left, 0 None, 1 Right
-    # maneuver_state = 0 # 0 init maneuver, 1 running backward wait for line, 2 found line still going backward, 3 begin to loose line
+    # Mémorise la dernière direction prise pour savoir de quel côté reculer si la ligne est perdue.
+    # -1 : Gauche, 0 : Tout droit, 1 : Droite
+    last_turn = 0
+
     END_COUNT_MANEUVER = 100
-    count_maneuver = END_COUNT_MANEUVER # letting time to the maneuver when we are going forward again
+    count_maneuver = END_COUNT_MANEUVER
 
     while True:
-        # ── Lecture atomique de l'état simplifié ──────────────────
+        # ── 1. Lecture de l'état actuel ───────────────────────────
         with robot.state.lock:
             if not robot.state.running:
                 break
             emergency = robot.state.emergency_stop
-            action    = robot.state.line_action
+            action = robot.state.line_action
             maneuver = robot.state.maneuver
 
-        # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
+        # ── 2. Gestion de l'urgence (Priorité Absolue) ────────────
         if emergency:
             robot.motor.stop()
             robot.head.steer_center()
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             time.sleep(interval)
-            continue
+            continue  # Saute le reste de la boucle tant que l'obstacle est là
 
-        # ── Suivi de ligne décodé (Priorité 2) ────────────────────
+        # ── 3. Affichage des changements de comportement ──────────
         if action != last_action:
             log.info("Changement de comportement → %s", action.name)
             if action == LinePosition.LINE_LOST:
@@ -158,85 +178,142 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 log.info("Intersection détectée — passage tout droit")
             last_action = action
 
-        if not maneuver: # not in maneuver
-            if count_maneuver != END_COUNT_MANEUVER:
-                if (last_turn == -1 and (action == LinePosition.TURN_LEFT_SOFT or action == LinePosition.TURN_LEFT_HARD)) or (last_turn == 1 and (action == LinePosition.TURN_RIGHT_SOFT or action == LinePosition.TURN_RIGHT_HARD)):
-                    count_maneuver = END_COUNT_MANEUVER
-            if count_maneuver == END_COUNT_MANEUVER: # letting time to the forward (end) of the maneuver
-                if action == LinePosition.STRAIGHT:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                    last_turn = 0
+        # ── 4. Logique de navigation et de récupération ───────────
+        # Si la ligne vient d'être perdue, on attend un peu (TIME_LOST) avant de paniquer
+        if robot.state.lost_time + TIME_LOST <= time.time():
+            pass  # Période de grâce, on continue sur la lancée
+        else:
+            # === MODE A : Conduite normale (pas en pleine manœuvre de recul) ===
+            if not maneuver:
+                with robot.state.lock:
+                    robot.state.lost_time = time.time()
 
-                elif action == LinePosition.TURN_LEFT_SOFT:
-                    robot.head.steer_left(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                    last_turn = -1
+                # --- ÉTAPE POST-MANŒUVRE ---
+                # Le robot vient de retrouver la ligne après l'avoir perdue.
+                # On lui laisse un court instant (TIME_POST_MANUVER) pour se stabiliser.
+                if robot.state.post_manuver:
+                    if robot.state.post_time + TIME_POST_MANUVER <= time.time():
+                        # La logique de conduite ici est identique à la conduite de base (voir plus bas)
+                        if last_turn == 0:
+                            robot.head.steer_center()
+                            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
 
-                elif action == LinePosition.TURN_RIGHT_SOFT:
-                    robot.head.steer_right(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                    last_turn = 1
+                        elif last_turn == -1:
+                            robot.head.steer_left(STEER_HARD_DEG)
+                            robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
 
-                elif action == LinePosition.TURN_LEFT_HARD:
-                    robot.head.steer_left(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                    last_turn = -1
+                        elif last_turn == 1:
+                            robot.head.steer_right(STEER_HARD_DEG)
+                            robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
 
-                elif action == LinePosition.TURN_RIGHT_HARD:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                    last_turn = 1
+                        else:  # Si on reperd la ligne pendant la stabilisation
+                            log.info("Ligne reperdue, le dernier virage était " + str(last_turn))
+                            robot.motor.stop()
+                            robot.head.steer_center()
 
-                elif action == LinePosition.INTERSECTION:
-                    robot.head.steer_center()
-                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                    last_turn = 0
+                            with robot.state.lock:
+                                robot.state.lost_time = time.time()
+                                robot.state.post_manuver = False
+                                robot.state.maneuver = True
 
-                else:  # LinePosition.LINE_LOST
-                    log.info("lose the line, last turn is "+str(last_turn))
-                    robot.motor.stop()
-                    robot.head.steer_center()
-                    if last_turn == 0:
+                # --- CONDUITE NORMALE DE BASE ---
+                else:
+                    if action == LinePosition.STRAIGHT:
                         robot.head.steer_center()
                         robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+                        last_turn = 0
+
+                    elif action == LinePosition.TURN_LEFT_SOFT:
+                        robot.head.steer_left(STEER_SOFT_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                        last_turn = -1
+
+                    elif action == LinePosition.TURN_RIGHT_SOFT:
+                        robot.head.steer_right(STEER_SOFT_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                        last_turn = 1
+
+                    elif action == LinePosition.TURN_LEFT_HARD:
+                        robot.head.steer_left(STEER_HARD_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                        last_turn = -1
+
+                    elif action == LinePosition.TURN_RIGHT_HARD:
+                        robot.head.steer_right(STEER_HARD_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                        last_turn = 1
+
+                    elif action == LinePosition.INTERSECTION:
+                        robot.head.steer_center()
+                        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+                        last_turn = 0
+
+                    # --- PERTE DE LIGNE (Déclenchement manœuvre) ---
+                    else:  # LinePosition.LINE_LOST
+                        log.info("Ligne perdue, le dernier virage était " + str(last_turn))
+                        robot.motor.stop()
+                        robot.head.steer_center()
+                        with robot.state.lock:
+                            robot.state.lost_time = time.time()
+                            robot.state.post_manuver = False
+
+                        # Si on allait tout droit, on continue tout droit en espérant la retrouver (traits discontinus)
+                        if last_turn == 0:
+                            robot.head.steer_center()
+                            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+                            with robot.state.lock:
+                                robot.state.maneuver = False
+
+                        # Si on tournait à gauche, on a dû déborder : on braque à droite et on recule
+                        elif last_turn == -1:
+                            robot.head.steer_right(STEER_HARD_DEG)
+                            robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
+                            with robot.state.lock:
+                                robot.state.maneuver = True
+
+                        # Si on tournait à droite, on a dû déborder : on braque à gauche et on recule
+                        elif last_turn == 1:
+                            robot.head.steer_left(STEER_HARD_DEG)
+                            robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
+                            with robot.state.lock:
+                                robot.state.maneuver = True
+
+            # === MODE B : En pleine manœuvre de récupération (recul) ===
+            else:
+                # On recule en arc de cercle jusqu'à ce qu'un capteur touche à nouveau la ligne
+                if last_turn == -1:  # On s'était perdu en tournant à gauche
+                    # On arrête le recul dès que le capteur droit voit la ligne fortement
+                    if action == LinePosition.TURN_RIGHT_HARD:
+                        log.info("Ligne retrouvée par le capteur droit !")
+                        robot.head.steer_left(STEER_SOFT_DEG)  # On se redresse doucement
+                        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)  # On repart
                         with robot.state.lock:
                             robot.state.maneuver = False
-                    elif last_turn == -1:  # if we were turning left
-                        robot.head.steer_right(STEER_HARD_DEG)
-                        robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
+                            robot.state.post_time = time.time()  # Déclenche l'état post-manœuvre
+
+                elif last_turn == 1:  # On s'était perdu en tournant à droite
+                    # On arrête le recul dès que le capteur gauche voit la ligne fortement
+                    if action == LinePosition.TURN_LEFT_HARD:
+                        log.info("Ligne retrouvée par le capteur gauche !")
+                        robot.head.steer_right(STEER_SOFT_DEG)
+                        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
                         with robot.state.lock:
-                            robot.state.maneuver = True
-                    elif last_turn == 1:  # if we were turning right
-                        robot.head.steer_left(STEER_HARD_DEG)
-                        robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
+                            robot.state.maneuver = False
+                            robot.state.post_time = time.time()
+                            robot.state.post_manuver = True
+
+                elif last_turn == 0: # On s'était perdu tout droit
+                    if action in [LinePosition.STRAIGHT, LinePosition.INTERSECTION]:
+                        robot.head.steer_center()
+                        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
                         with robot.state.lock:
-                            robot.state.maneuver = True
-            else:
-                count_maneuver += 1
-        else: # in maneuver
-            if last_turn == -1: # if we were turning left
-                if action == LinePosition.TURN_RIGHT_HARD:
-                    log.info("LinePosition.TURN_RIGHT_HARD")
-                    robot.head.steer_left(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-                    with robot.state.lock:
-                        robot.state.maneuver = False
-                    count_maneuver = 0
-            elif last_turn == 1: # if we were turning right
-                if action == LinePosition.TURN_LEFT_HARD:
-                    robot.head.steer_right(STEER_SOFT_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-                    with robot.state.lock:
-                        robot.state.maneuver = False
-                    count_maneuver = 0
-                    log.info("LinePosition.TURN_LEFT_HARD")
+                            robot.state.maneuver = False
+                            robot.state.post_time = time.time()
+                            robot.state.post_manuver = True
 
+            time.sleep(interval)
 
-
-        time.sleep(interval)
-
-    # ── Arrêt propre en fin de thread ─────────────────────────────
+    # ── Arrêt propre en fin de thread (quand robot.state.running devient False) ──
     robot.motor.stop()
     robot.head.steer_center()
     log.info("Thread arrêté")
@@ -244,14 +321,17 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
 def thread_buzzer(robot: Robot) -> None:
     """
+    Gère les effets sonores du robot.
     - Obstacle (emergency_stop)         -> sirène POLICE
-    - Manœuvre de récupération (maneuver) -> son défini par LINE_LOST_SOUND
-    - Robot en mouvement (driving)      -> thème MII
+    - Manœuvre de récupération          -> son défini par LINE_LOST_SOUND
+    - Robot en mouvement normal         -> thème MII
     - À l'arrêt                         -> silence
     """
     log = logger.get_logger("BUZZER")
     log.info("Thread démarré")
 
+    # Fonctions de vérification d'état (callbacks) pour que la fonction play()
+    # sache quand elle doit arrêter le son en cours de lecture.
     def emergency_active() -> bool:
         with robot.state.lock:
             return robot.state.running and robot.state.emergency_stop
@@ -264,12 +344,14 @@ def thread_buzzer(robot: Robot) -> None:
         with robot.state.lock:
             return robot.state.running and robot.state.driving and not robot.state.emergency_stop
 
+    # ATTENTION: La boucle est actuellement sur `while False:`
+    # Ce thread est donc virtuellement inactif à l'exécution.
     while False:
         with robot.state.lock:
-            running   = robot.state.running
+            running = robot.state.running
             emergency = robot.state.emergency_stop
-            maneuver  = robot.state.maneuver
-            driving   = robot.state.driving
+            maneuver = robot.state.maneuver
+            driving = robot.state.driving
 
         if not running:
             break
@@ -286,4 +368,3 @@ def thread_buzzer(robot: Robot) -> None:
             time.sleep(SENSOR_INTERVAL_S)
 
     log.info("Thread arrêté")
-
