@@ -153,14 +153,17 @@ def thread_controller(robot: Robot, interval: float) -> None:
         sleep_time = 2
 
         robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
+        time.sleep(0.5)
         robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         time.sleep(sleep_time)
 
         robot.head.set_angle_motor(0, WHEEL_ANGLE_MIN)
+        time.sleep(0.5)
         robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         time.sleep(2*sleep_time)
 
         robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+        time.sleep(0.5)
         robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         time.sleep(sleep_time)
 
