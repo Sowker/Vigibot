@@ -23,8 +23,8 @@ from t11_buzzer_Sirene import POLICE, MII, play
 LINE_LOST_SOUND = "MII"
 
 # ── Temporisations ─────────────────────────────────────────────────
-TIME_LOST = 0.5  # Temps d'attente/délai avant de réagir à la perte de ligne
-TIME_POST_MANUVER = 0.10  # Temps alloué pour se stabiliser après avoir retrouvé la ligne
+TIME_LOST = 0.1  # Temps d'attente/délai avant de réagir à la perte de ligne
+TIME_POST_MANUVER = 0.1  # Temps alloué pour se stabiliser après avoir retrouvé la ligne
 
 CTRL_INTERVAL_S = 0.05  # s — période du thread contrôleur (cerveau)
 SENSOR_INTERVAL_S = 0.05  # s — période des threads capteurs (yeux/oreilles)
@@ -149,9 +149,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
     # -1 : Gauche, 0 : Tout droit, 1 : Droite
     last_turn = 0
 
-    END_COUNT_MANEUVER = 100
-    count_maneuver = END_COUNT_MANEUVER
-
     while True:
         # ── 1. Lecture de l'état actuel ───────────────────────────
         with robot.state.lock:
@@ -179,20 +176,24 @@ def thread_controller(robot: Robot, interval: float) -> None:
             last_action = action
 
         # ── 4. Logique de navigation et de récupération ───────────
-        # Si la ligne vient d'être perdue, on attend un peu (TIME_LOST) avant de paniquer
-        if robot.state.lost_time + TIME_LOST <= time.time():
-            pass  # Période de grâce, on continue sur la lancée
-        else:
-            # === MODE A : Conduite normale (pas en pleine manœuvre de recul) ===
-            if not maneuver:
-                with robot.state.lock:
-                    robot.state.lost_time = time.time()
 
-                # --- ÉTAPE POST-MANŒUVRE ---
-                # Le robot vient de retrouver la ligne après l'avoir perdue.
-                # On lui laisse un court instant (TIME_POST_MANUVER) pour se stabiliser.
-                if robot.state.post_manuver:
-                    if robot.state.post_time + TIME_POST_MANUVER <= time.time():
+        # === MODE A : Conduite normale (pas en pleine manœuvre de recul) ===
+        if not maneuver:
+            # --- ÉTAPE POST-MANŒUVRE ---
+            # Le robot vient de retrouver la ligne après l'avoir perdue.
+            # On lui laisse un court instant (TIME_POST_MANUVER) pour se stabiliser.
+            if robot.state.post_manuver:
+                if time.time() <= robot.state.post_time + TIME_POST_MANUVER:
+                    if action == LinePosition.LINE_LOST:  # Si on reperd la ligne pendant la stabilisation
+                        log.info("Ligne reperdue, le dernier virage était " + str(last_turn))
+                        robot.motor.stop()
+                        robot.head.steer_center()
+
+                        with robot.state.lock:
+                            robot.state.lost_time = time.time()
+                            robot.state.post_manuver = False
+                            robot.state.maneuver = True
+                    else:
                         # La logique de conduite ici est identique à la conduite de base (voir plus bas)
                         if last_turn == 0:
                             robot.head.steer_center()
@@ -206,112 +207,107 @@ def thread_controller(robot: Robot, interval: float) -> None:
                             robot.head.steer_right(STEER_HARD_DEG)
                             robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
 
-                        else:  # Si on reperd la ligne pendant la stabilisation
-                            log.info("Ligne reperdue, le dernier virage était " + str(last_turn))
-                            robot.motor.stop()
-                            robot.head.steer_center()
-
-                            with robot.state.lock:
-                                robot.state.lost_time = time.time()
-                                robot.state.post_manuver = False
-                                robot.state.maneuver = True
-
-                # --- CONDUITE NORMALE DE BASE ---
                 else:
-                    if action == LinePosition.STRAIGHT:
-                        robot.head.steer_center()
-                        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                        last_turn = 0
+                    with robot.state.lock:
+                        robot.state.post_manuver = False
+                        robot.state.maneuver = False
 
-                    elif action == LinePosition.TURN_LEFT_SOFT:
-                        robot.head.steer_left(STEER_SOFT_DEG)
-                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                        last_turn = -1
+            # --- CONDUITE NORMALE DE BASE ---
+            else:
+                # Logic based on the linerPosition -> action that the robot need to perform to follow it
+                if action == LinePosition.STRAIGHT:
+                    robot.head.steer_center()
+                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+                    last_turn = 0
 
-                    elif action == LinePosition.TURN_RIGHT_SOFT:
-                        robot.head.steer_right(STEER_SOFT_DEG)
-                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                        last_turn = 1
+                elif action == LinePosition.TURN_LEFT_SOFT:
+                    robot.head.steer_left(STEER_SOFT_DEG)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                    last_turn = -1
 
-                    elif action == LinePosition.TURN_LEFT_HARD:
-                        robot.head.steer_left(STEER_HARD_DEG)
-                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                        last_turn = -1
+                elif action == LinePosition.TURN_RIGHT_SOFT:
+                    robot.head.steer_right(STEER_SOFT_DEG)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                    last_turn = 1
 
-                    elif action == LinePosition.TURN_RIGHT_HARD:
-                        robot.head.steer_right(STEER_HARD_DEG)
-                        robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
-                        last_turn = 1
+                elif action == LinePosition.TURN_LEFT_HARD:
+                    robot.head.steer_left(STEER_HARD_DEG)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                    last_turn = -1
 
-                    elif action == LinePosition.INTERSECTION:
-                        robot.head.steer_center()
-                        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                        last_turn = 0
+                elif action == LinePosition.TURN_RIGHT_HARD:
+                    robot.head.steer_right(STEER_HARD_DEG)
+                    robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT, fast_accel=True)
+                    last_turn = 1
 
-                    # --- PERTE DE LIGNE (Déclenchement manœuvre) ---
-                    else:  # LinePosition.LINE_LOST
+                elif action == LinePosition.INTERSECTION:
+                    robot.head.steer_center()
+                    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+                    last_turn = 0
+
+                # --- PERTE DE LIGNE (Déclenchement manœuvre) ---
+                else: # LinePosition.LINE_LOST
+
+                    # detect if already in the lost state to not reset the timer
+                    if not(robot.state.already_lost):
                         log.info("Ligne perdue, le dernier virage était " + str(last_turn))
                         robot.motor.stop()
                         robot.head.steer_center()
                         with robot.state.lock:
                             robot.state.lost_time = time.time()
                             robot.state.post_manuver = False
+                            robot.state.already_lost = True
 
-                        # Si on allait tout droit, on continue tout droit en espérant la retrouver (traits discontinus)
-                        if last_turn == 0:
-                            robot.head.steer_center()
-                            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-                            with robot.state.lock:
-                                robot.state.maneuver = False
+                    else:
+                        # We already have detected that we lost the line
+                        # Si la ligne vient d'être perdue, on attend un peu (TIME_LOST) avant de paniquer
+                        if time.time() <= robot.state.lost_time + TIME_LOST:
+                            # Si on allait tout droit, on continue tout droit en espérant la retrouver (traits discontinus)
+                            if last_turn == 0:
+                                robot.head.steer_center()
+                                robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
 
-                        # Si on tournait à gauche, on a dû déborder : on braque à droite et on recule
-                        elif last_turn == -1:
-                            robot.head.steer_right(STEER_HARD_DEG)
-                            robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
+                            # Si on tournait à gauche, on continue pour detecter une ligne
+                            elif last_turn == -1:
+                                robot.head.steer_left(STEER_HARD_DEG)
+                                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+
+                            # Si on tournait à droite, on continue pour detecter une ligne
+                            elif last_turn == 1:
+                                robot.head.steer_right(STEER_HARD_DEG)
+                                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+                        else:
+                            # the timer runs out, we go to the manuver state do decide what to do
                             with robot.state.lock:
                                 robot.state.maneuver = True
 
-                        # Si on tournait à droite, on a dû déborder : on braque à gauche et on recule
-                        elif last_turn == 1:
-                            robot.head.steer_left(STEER_HARD_DEG)
-                            robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
-                            with robot.state.lock:
-                                robot.state.maneuver = True
-
-            # === MODE B : En pleine manœuvre de récupération (recul) ===
-            else:
+        # === MODE B : En pleine manœuvre de récupération (recul) ===
+        else:
+            # Manuver
+            if action == LinePosition.LINE_LOST:
                 # On recule en arc de cercle jusqu'à ce qu'un capteur touche à nouveau la ligne
                 if last_turn == -1:  # On s'était perdu en tournant à gauche
                     # On arrête le recul dès que le capteur droit voit la ligne fortement
-                    if action == LinePosition.TURN_RIGHT_HARD:
-                        log.info("Ligne retrouvée par le capteur droit !")
-                        robot.head.steer_left(STEER_SOFT_DEG)  # On se redresse doucement
-                        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)  # On repart
-                        with robot.state.lock:
-                            robot.state.maneuver = False
-                            robot.state.post_time = time.time()  # Déclenche l'état post-manœuvre
+                    robot.head.steer_right(STEER_SOFT_DEG)  # On se redresse doucement
+                    robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
 
                 elif last_turn == 1:  # On s'était perdu en tournant à droite
                     # On arrête le recul dès que le capteur gauche voit la ligne fortement
-                    if action == LinePosition.TURN_LEFT_HARD:
-                        log.info("Ligne retrouvée par le capteur gauche !")
-                        robot.head.steer_right(STEER_SOFT_DEG)
-                        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-                        with robot.state.lock:
-                            robot.state.maneuver = False
-                            robot.state.post_time = time.time()
-                            robot.state.post_manuver = True
+                    robot.head.steer_left(STEER_SOFT_DEG)
+                    robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
 
                 elif last_turn == 0: # On s'était perdu tout droit
-                    if action in [LinePosition.STRAIGHT, LinePosition.INTERSECTION]:
-                        robot.head.steer_center()
-                        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-                        with robot.state.lock:
-                            robot.state.maneuver = False
-                            robot.state.post_time = time.time()
-                            robot.state.post_manuver = True
+                    robot.head.steer_center()
+                    robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
 
-            time.sleep(interval)
+            else:
+                # Out of the manuver when detecting the line
+                with robot.state.lock:
+                    robot.state.maneuver = False
+                    robot.state.post_time = time.time()
+                    robot.state.post_manuver = True
+
+        time.sleep(interval)
 
     # ── Arrêt propre en fin de thread (quand robot.state.running devient False) ──
     robot.motor.stop()

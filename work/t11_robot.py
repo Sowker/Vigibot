@@ -40,10 +40,11 @@ class RobotState:
     emergency_stop: bool = False   # True  → obstacle détecté
     driving:        bool = False   # True  → le robot avance
     maneuver:       bool = False   # True  → manœuvre de récupération (ligne perdue)
-    lost_time:      float = time.time() # -> is the time when we lost the line
+    lost_time:      float = None # -> is the time when we lost the line
     post_time:      float = None # -> time for fine tuning post manuver
     post_manuver:   bool = False   # TRUE -> do the post manuver tuning
     shutdown:       bool = False   # TRUE -> kill the robot
+    already_lost:   bool = False   # True -> count until he is really lost
 
 
 # ═══════════════════════════════════════════════════════════════════
