@@ -23,7 +23,7 @@ from t11_buzzer_Sirene import POLICE, MII, play
 LINE_LOST_SOUND = "MII"
 
 # ── Temporisations ─────────────────────────────────────────────────
-TIME_LOST = 1  # Temps d'attente/délai avant de réagir à la perte de ligne
+TIME_LOST = 0.8  # Temps d'attente/délai avant de réagir à la perte de ligne
 TIME_POST_MANUVER = 0.1  # Temps alloué pour se stabiliser après avoir retrouvé la ligne
 
 CTRL_INTERVAL_S = 0.05  # s — période du thread contrôleur (cerveau)
@@ -260,6 +260,7 @@ def movement_manuver(robot: Robot, interval: float, log) -> None:
                 robot.state.post_manuver = True
             else:
                 robot.state.post_manuver = False
+
 
 def thread_controller(robot: Robot, interval: float) -> None:
     """
