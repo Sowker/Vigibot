@@ -135,7 +135,6 @@ def thread_LED(robot: Robot, interval: float):
     log.info("Thread arrêté")
 
 def movement_post_manuver(robot: Robot, interval: float, log) -> None:
-    print("IN POST MANUVER")
     if time.time() <= robot.state.post_time + TIME_POST_MANUVER:
         if robot.state.line_action == LinePosition.LINE_LOST:  # Si on reperd la ligne pendant la stabilisation
             log.info("Ligne reperdue, le dernier virage était " + str(robot.state.last_turn))
@@ -209,10 +208,6 @@ def basic_movement(robot: Robot, interval: float, log) -> None:
             # We already have detected that we lost the line
             # Si la ligne vient d'être perdue, on attend un peu (TIME_LOST) avant de paniquer
             if time.time() <= robot.state.lost_time + TIME_LOST:
-                robot.head.steer_center()
-                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
-                print("IN LOST TIME")
-
                 # Si on allait tout droit, on continue tout droit en espérant la retrouver (traits discontinus)
                 if robot.state.last_turn == 0:
                     robot.head.steer_center()
@@ -227,7 +222,6 @@ def basic_movement(robot: Robot, interval: float, log) -> None:
                 elif robot.state.last_turn == 1:
                     robot.head.steer_right(STEER_HARD_DEG)
                     robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
-
             else:
                 # the timer runs out, we go to the manuver state do decide what to do
                 with robot.state.lock:
@@ -236,7 +230,6 @@ def basic_movement(robot: Robot, interval: float, log) -> None:
 
 def movement_manuver(robot: Robot, interval: float, log) -> None:
     # Manuver
-    print("IN MANUVER")
     if robot.state.line_action == LinePosition.LINE_LOST:
         # On recule en arc de cercle jusqu'à ce qu'un capteur touche à nouveau la ligne
         if robot.state.last_turn == -1:  # On s'était perdu en tournant à gauche
@@ -254,7 +247,6 @@ def movement_manuver(robot: Robot, interval: float, log) -> None:
             robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, fast_accel=True)
 
     else:
-        print("DETECT THE LINE SHOULD GO BACK TO BASIC")
         # Out of the manuver when detecting the line
         with robot.state.lock:
             robot.state.already_lost = False
@@ -264,9 +256,6 @@ def movement_manuver(robot: Robot, interval: float, log) -> None:
                 robot.state.post_manuver = True
             else:
                 robot.state.post_manuver = False
-        print("POST_MANUVER: ", robot.state.post_manuver)
-        print("MANUVER: ", robot.state.maneuver)
-
 
 def thread_controller(robot: Robot, interval: float) -> None:
     """
