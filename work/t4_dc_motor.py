@@ -109,7 +109,7 @@ class DCMotor:
 
 if __name__ == '__main__':
     # test automatique, avancé reculé et arrêt, le tout en douceur
-    # Pour le contrôle avec le clavier, voir le fichier keyboard_control.py
+    # Pour le contrôle avec le clavier, voir le fichier t9_keyboard_control.py
     i2c = busio.I2C(SCL, SDA)
     PCA_ADDRESS = 0x5F
     pca = PCA9685(i2c, address=PCA_ADDRESS)
