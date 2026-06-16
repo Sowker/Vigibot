@@ -21,9 +21,9 @@ WHEEL_ANGLE_MIN     = 52    # degrés — braquage gauche max
 WHEEL_ANGLE_CENTER  = 90     # degrés — tout droit
 WHEEL_ANGLE_MAX     = 128    # degrés — braquage droite max
 
-HEAD_ANGLE_MIN      = 10     # degrés
+HEAD_ANGLE_MIN      = 2     # degrés
 HEAD_ANGLE_CENTER   = 90     # degrés
-HEAD_ANGLE_MAX      = 170    # degrés
+HEAD_ANGLE_MAX      = 188    # degrés
 
 # Pas et délai pour move_to()
 SERVO_STEP_DEG      = 0.5    # degrés par pas (flottant)
