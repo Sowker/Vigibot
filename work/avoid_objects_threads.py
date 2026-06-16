@@ -125,14 +125,16 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     def scan_180() -> list:
+        HR_MOTOR = 1
+        VR_MOTOR = 2
         data = []
-        robot.head.set_angle_motor(2, HEAD_ANGLE_CENTER)
-        robot.head.set_angle_motor(1, HEAD_ANGLE_MIN)
-        for angle in range(HEAD_ANGLE_MIN, HEAD_ANGLE_MAX+1):
-            robot.head.set_angle_motor(1, angle)
+        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER)
+        robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_MAX)
+        for angle in range(HEAD_ANGLE_MAX, HEAD_ANGLE_MIN-1, -1):
+            robot.head.set_angle_motor(HR_MOTOR, angle)
             time.sleep(0.1)
             data.append(robot.ultrasonic.read_mm())
-        robot.head.set_angle_motor(2, HEAD_ANGLE_CENTER)
+        robot.head.set_angle_motor(1, HEAD_ANGLE_CENTER)
         return data
 
     while True:
