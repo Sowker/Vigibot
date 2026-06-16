@@ -134,6 +134,9 @@ def thread_LED(robot: Robot, interval: float):
     robot.front_leds.cancel_blink()
     log.info("Thread arrêté")
 
+def movement(robot: Robot, direction: bool, last_turn: int, last_action: Optional[LinePosition]) -> None:
+    pass
+
 
 def thread_controller(robot: Robot, interval: float) -> None:
     """
