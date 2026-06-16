@@ -208,6 +208,9 @@ def basic_movement(robot: Robot, interval: float, log) -> None:
             # We already have detected that we lost the line
             # Si la ligne vient d'être perdue, on attend un peu (TIME_LOST) avant de paniquer
             if time.time() <= robot.state.lost_time + TIME_LOST:
+                robot.head.steer_center()
+                robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+
                 # Si on allait tout droit, on continue tout droit en espérant la retrouver (traits discontinus)
                 if robot.state.last_turn == 0:
                     robot.head.steer_center()
@@ -222,6 +225,7 @@ def basic_movement(robot: Robot, interval: float, log) -> None:
                 elif robot.state.last_turn == 1:
                     robot.head.steer_right(STEER_HARD_DEG)
                     robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+
             else:
                 # the timer runs out, we go to the manuver state do decide what to do
                 with robot.state.lock:
