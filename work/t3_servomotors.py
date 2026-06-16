@@ -148,15 +148,15 @@ class Head:
 
     def set_angle_motor(self, channel_sevro : int, angle: float) -> None:
         match channel_sevro:
-            case 0:
+            case 0: # wheel
                 wheel_angle = max(WHEEL_ANGLE_MIN, min(WHEEL_ANGLE_MAX, angle))
                 self._log.info("wheel_angle=%d, actual_angle=%d", wheel_angle, self.wheel.angle)
                 self.wheel.set_angle(wheel_angle)
                 self._log.info("wheel_angle=%d, actual_angle=%d", wheel_angle, self.wheel.angle)
-            case 1:
+            case 1: # horizontal
                 head_angle = max(HEAD_ANGLE_MIN, min(HEAD_ANGLE_MAX, angle))
                 self.horizontal.set_angle(head_angle)
-            case 2:
+            case 2: # vertical
                 head_angle = max(HEAD_ANGLE_MIN, min(HEAD_ANGLE_MAX, angle))
                 self.vertical.set_angle(head_angle)
             case _:

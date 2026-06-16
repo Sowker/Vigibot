@@ -5,10 +5,9 @@ from t11_robot import Robot
 import logger
 
 
-from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX
+from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
 from t6_line_tracking import LinePosition
-from t11_buzzer_Sirene import POLICE, MII, play
 
 # Constantes
 
@@ -125,12 +124,16 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
 
-    last_action: Optional[LinePosition] = None
-
-    last_turn = 0 # -1 left, 0 None, 1 Right
-    # maneuver_state = 0 # 0 init maneuver, 1 running backward wait for line, 2 found line still going backward, 3 begin to loose line
-    END_COUNT_MANEUVER = 100
-    count_maneuver = END_COUNT_MANEUVER # letting time to the maneuver when we are going forward again
+    def scan_180() -> list:
+        data = []
+        robot.head.set_angle_motor(2, HEAD_ANGLE_CENTER)
+        robot.head.set_angle_motor(1, HEAD_ANGLE_MIN)
+        for angle in range(HEAD_ANGLE_MIN, HEAD_ANGLE_MAX+1):
+            robot.head.set_angle_motor(1, angle)
+            time.sleep(0.1)
+            data.append(robot.ultrasonic.read_mm())
+        robot.head.set_angle_motor(2, HEAD_ANGLE_CENTER)
+        return data
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -150,28 +153,34 @@ def thread_controller(robot: Robot, interval: float) -> None:
             continue
 
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
-        sleep_time = 2
 
-        robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
-        time.sleep(0.5)
-        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        time.sleep(sleep_time)
 
-        robot.head.set_angle_motor(0, WHEEL_ANGLE_MIN)
-        time.sleep(0.5)
-        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        time.sleep(2*sleep_time)
+        scan = scan_180()
+        print(scan)
+        time.sleep(120)
 
-        robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-        time.sleep(0.5)
-        robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        time.sleep(sleep_time)
-
-        robot.motor.stop()
-        robot.head.steer_center()
-        time.sleep(20)
-
-        time.sleep(interval)
+        # sleep_time = 2
+        #
+        # robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
+        # time.sleep(0.5)
+        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+        # time.sleep(sleep_time)
+        #
+        # robot.head.set_angle_motor(0, WHEEL_ANGLE_MIN)
+        # time.sleep(0.5)
+        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+        # time.sleep(2*sleep_time)
+        #
+        # robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+        # time.sleep(0.5)
+        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+        # time.sleep(sleep_time)
+        #
+        # robot.motor.stop()
+        # robot.head.steer_center()
+        # time.sleep(20)
+        #
+        # time.sleep(interval)
 
     # ── Arrêt propre en fin de thread ─────────────────────────────
     robot.motor.stop()
