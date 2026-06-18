@@ -163,6 +163,13 @@ def thread_controller(robot: Robot, interval: float) -> None:
         print(scan)
         time.sleep(120)
 
+        max_val = min(scan)
+        max_id = scan.index(max_val)
+
+        nearest_object_angle = HEAD_ANGLE_MAX - max_id + HEAD_ANGLE_MIN
+
+        robot.head.set_angle_motor(1, nearest_object_angle)
+
         # sleep_time = 2
         #
         # robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
