@@ -40,6 +40,8 @@ class RobotState:
     emergency_stop: bool = False   # True  → obstacle détecté
     driving:        bool = False   # True  → le robot avance
     maneuver:       bool = False   # True  → manœuvre de récupération (ligne perdue)
+    arrow_direction: int = 0       # -1 = gauche, 0 = inconnu, 1 = droite
+
 
 
 # ═══════════════════════════════════════════════════════════════════
