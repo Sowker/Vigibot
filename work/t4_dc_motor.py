@@ -9,7 +9,7 @@ import busio
 import logger as log
 
 # ── Constantes ──────────────────────────────────────────────────────
-MOTOR_RAMP_MAX_TIME_S = 1.0  # durée max de la rampe d'accélération
+MOTOR_RAMP_MAX_TIME_S = 0.8  # durée max de la rampe d'accélération
 MOTOR_RAMP_STEPS      = 10   # nombre de pas par seconde de rampe
 
 CHANNEL_MOTOR_IN1        = 15  # Moteur DC pôle +
@@ -19,7 +19,7 @@ SPEED_NORMAL_PCT      = 35   # % puissance — ligne droite
 SPEED_TURNING_PCT     = 40   # % puissance — virage doux
 SPEED_ADJUSTING_PCT   = 40
 SPEED_BACKWARD        = 40   # % puissance — utilisé généralement pour aller en arrière
-SPEED_HIGH = 60
+SPEED_HIGH = 50
 
 class Direction(IntEnum):
     """Sens de marche du moteur DC."""
