@@ -4,10 +4,9 @@ from typing import Optional
 from t11_robot import Robot
 import logger
 
-
 from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
-from t6_line_tracking import LinePosition
+from t12_circle_following import CirclePosition
 
 # Constantes
 
@@ -73,9 +72,9 @@ def thread_line(robot: Robot, interval: float) -> None:
 def thread_LED(robot: Robot, interval: float):
     """
     Pilote les LEDs arrière (WS2812) ET les LEDs avant en parallèle :
-    - Obstacle (priorité 1) ou ligne perdue -> warning (avant + arrière)
+    - Obstacle (priorité 1) ou perdu au centre -> warning (avant + arrière)
     - Virage gauche/droite -> clignotant correspondant (avant + arrière)
-    - Tout droit / intersection -> extinction des deux
+    - Tout droit / ambiguïté -> extinction des deux
     """
     log = logger.get_logger("LED")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
@@ -92,13 +91,13 @@ def thread_LED(robot: Robot, interval: float):
         if emergency:
             target_state = 'warning'
             robot.led.warning()
-        elif action == LinePosition.TURN_LEFT_SOFT or action == LinePosition.TURN_LEFT_HARD:
+        elif action == CirclePosition.TURN_LEFT_SOFT or action == CirclePosition.TURN_LEFT_HARD:
             target_state = 'left'
             robot.led.clignotant_gauche()
-        elif action == LinePosition.TURN_RIGHT_SOFT or action == LinePosition.TURN_RIGHT_HARD:
+        elif action == CirclePosition.TURN_RIGHT_SOFT or action == CirclePosition.TURN_RIGHT_HARD:
             target_state = 'right'
             robot.led.clignotant_droit()
-        elif action == LinePosition.LINE_LOST:
+        elif action == CirclePosition.LOST_IN_CENTER:
             target_state = 'warning'
             robot.led.warning()
         else:  # STRAIGHT / INTERSECTION
@@ -119,25 +118,11 @@ def thread_LED(robot: Robot, interval: float):
 
 def thread_controller(robot: Robot, interval: float) -> None:
     """
-    Boucle de décision : lit l'action synthétisée, décide et pilote les moteurs.
+    Boucle de décision pour le suivi de cercle :
+    lit l'action synthétisée, décide et pilote les moteurs.
     """
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-
-    def scan_180() -> list:
-        HR_MOTOR = 1
-        VR_MOTOR = 2
-        data = []
-        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+10)
-        robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_MAX)
-        time.sleep(0.3)
-        for angle in range(HEAD_ANGLE_MAX, HEAD_ANGLE_MIN-1, -1):
-            robot.head.set_angle_motor(HR_MOTOR, angle)
-            time.sleep(0.01)
-            data.append(robot.ultrasonic.read_mm())
-        time.sleep(1)
-        robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
-        return data
 
     while True:
         # ── Lecture atomique de l'état simplifié ──────────────────
@@ -146,7 +131,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 break
             emergency = robot.state.emergency_stop
             action    = robot.state.line_action
-            maneuver = robot.state.maneuver
 
         # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
         if emergency:
@@ -156,48 +140,51 @@ def thread_controller(robot: Robot, interval: float) -> None:
             time.sleep(interval)
             continue
 
-        # ── Suivi de ligne décodé (Priorité 2) ────────────────────
+        # ── Suivi de cercle décodé (Priorité 2) ────────────────────
+        
+        if action == CirclePosition.STRAIGHT:
+            # Ligne au milieu → tout droit
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.head.steer_center()
+            log.debug("→ Tout droit")
 
+        elif action == CirclePosition.TURN_LEFT_SOFT:
+            # Ligne à droite seulement → tourner doux à gauche
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.head.steer_left(intensity=15)
+            log.debug("↖ Tourner doux à gauche")
 
-        scan = scan_180()
-        # print(scan)
+        elif action == CirclePosition.TURN_LEFT_HARD:
+            # Ligne à droite + milieu → tourner fort à gauche
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.head.steer_left(intensity=35)
+            log.debug("⬅ Tourner fort à gauche")
 
+        elif action == CirclePosition.TURN_RIGHT_SOFT:
+            # Ligne à gauche seulement → tourner doux à droite
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.head.steer_right(intensity=15)
+            log.debug("↗ Tourner doux à droite")
 
-        max_val = min(scan)
-        max_id = scan.index(max_val)
+        elif action == CirclePosition.TURN_RIGHT_HARD:
+            # Ligne à gauche + milieu → tourner fort à droite
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.head.steer_right(intensity=35)
+            log.debug("➡ Tourner fort à droite")
 
-        nearest_object_angle = HEAD_ANGLE_MAX - max_id + HEAD_ANGLE_MIN
+        elif action == CirclePosition.INTERSECTION:
+            # Tous les capteurs → ambiguïté, avancer prudemment
+            robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT)
+            robot.head.steer_center()
+            log.debug("➕ Ambiguïté - avancer prudemment")
 
-        robot.head.set_angle_motor(1, nearest_object_angle)
+        elif action == CirclePosition.LOST_IN_CENTER:
+            # Aucun capteur → perdu au centre, chercher la ligne
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.head.steer_center()
+            log.warning("❓ Perdu au centre du cercle")
 
-        print(max_val)
-        print(max_id)
-        print(nearest_object_angle)
-
-        time.sleep(120)
-
-        # sleep_time = 2
-        #
-        # robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
-        # time.sleep(0.5)
-        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        # time.sleep(sleep_time)
-        #
-        # robot.head.set_angle_motor(0, WHEEL_ANGLE_MIN)
-        # time.sleep(0.5)
-        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        # time.sleep(2*sleep_time)
-        #
-        # robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-        # time.sleep(0.5)
-        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        # time.sleep(sleep_time)
-        #
-        # robot.motor.stop()
-        # robot.head.steer_center()
-        # time.sleep(20)
-        #
-        # time.sleep(interval)
+        time.sleep(interval)
 
     # ── Arrêt propre en fin de thread ─────────────────────────────
     robot.motor.stop()
