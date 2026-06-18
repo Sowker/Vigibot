@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import time
 import logger 
-from t11_robot import Robot
+# from t11_robot import Robot
 
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
 def thread_arrow(robot,interval) : 
@@ -60,19 +60,22 @@ def thread_arrow(robot,interval) :
     log.info("Thread arrêté") 
     
 if __name__ == "__main__" : 
-    while True : 
-        ret,frame = cap.read() 
-        if not ret : 
-            break
-        gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5,5),0) 
-        _, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
+    if not cap.isOpened():
+        print("Erreur : caméra non disponible")
+    else :
+        while True : 
+            ret,frame = cap.read() 
+            if not ret : 
+                continue
+            gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (5,5),0) 
+            _, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
 
-        cv2.imshow("Camera", frame)    # image normale
-        cv2.imshow("Seuillage", thresh) # ce que le code voit
+            cv2.imshow("Camera", frame)    # image normale
+            cv2.imshow("Seuillage", thresh) # ce que le code voit
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     cap.release()
     cv2.destroyAllWindows()
