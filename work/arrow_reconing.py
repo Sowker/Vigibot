@@ -55,8 +55,8 @@ def thread_arrow(robot,interval) :
         log.info("Direciton flèche : %s", {1 : "droite", -1 : "gauche", 0 : "inconnu"}[direction])
 
         #retour video pour tests
-        cv2.imshow("Seuillage",thresh)
-        cv2.waitKey(1)
+        cv2.imwrite("/tmp/arrow_thresh.jpg", thresh)
+        cv2.imwrite("/tmp/arrow_frame.jpg", frame)
 
         time.sleep(interval)
     picam.stop()
@@ -64,18 +64,25 @@ def thread_arrow(robot,interval) :
     log.info("Thread arrêté")
 
 if __name__ == "__main__" :
-    while True :
-        frame = picam.capture_array()
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5,5),0)
-        _, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
+    print("Démarrage — Ctrl+C pour arrêter. Images sauvegardées dans /tmp/")
+    try:
+        i = 0
+        while True :
+            frame = picam.capture_array()
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (5,5),0)
+            _, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
 
-        cv2.imshow("Camera", frame)
-        cv2.imshow("Seuillage", thresh)
+            cv2.imwrite("/tmp/arrow_frame.jpg", frame)
+            cv2.imwrite("/tmp/arrow_thresh.jpg", thresh)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            i += 1
+            if i % 20 == 0:
+                print(f"Frame {i} — images mises à jour dans /tmp/")
+            time.sleep(0.05)
+    except KeyboardInterrupt:
+        pass
 
     picam.stop()
-    cv2.destroyAllWindows()
+    print("Arrêté.")
