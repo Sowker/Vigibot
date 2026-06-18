@@ -64,9 +64,10 @@ def thread_arrow(robot,interval) :
     log.info("Thread arrêté")
 
 if __name__ == "__main__" :
-    print("Démarrage — Ctrl+C pour arrêter. Images sauvegardées dans /tmp/")
+    print("Démarrage — Ctrl+C pour arrêter.")
+    labels = {1: "DROITE ->", -1: "<- GAUCHE", 0: "inconnu"}
+    last_dir = None
     try:
-        i = 0
         while True :
             frame = picam.capture_array()
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -77,9 +78,32 @@ if __name__ == "__main__" :
             cv2.imwrite("/tmp/arrow_frame.jpg", frame)
             cv2.imwrite("/tmp/arrow_thresh.jpg", thresh)
 
-            i += 1
-            if i % 20 == 0:
-                print(f"Frame {i} — images mises à jour dans /tmp/")
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours = [c for c in contours if cv2.contourArea(c) > 500]
+            if not contours:
+                direction = 0
+            else:
+                arrow = max(contours, key=cv2.contourArea)
+                M = cv2.moments(arrow)
+                if M["m00"] == 0:
+                    direction = 0
+                else:
+                    cx = int(M["m10"] / M["m00"])
+                    leftmost = tuple(arrow[arrow[:, :, 0].argmin()][0])
+                    rightmost = tuple(arrow[arrow[:, :, 0].argmax()][0])
+                    dist_left = cx - leftmost[0]
+                    dist_right = rightmost[0] - cx
+                    if dist_right > dist_left:
+                        direction = 1
+                    elif dist_left > dist_right:
+                        direction = -1
+                    else:
+                        direction = 0
+
+            if direction != last_dir:
+                print(f"Direction : {labels[direction]}")
+                last_dir = direction
+
             time.sleep(0.05)
     except KeyboardInterrupt:
         pass
