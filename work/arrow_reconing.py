@@ -48,7 +48,7 @@ def _detect_direction(thresh):
     diff = left_pixels - right_pixels
     if abs(diff) < 500:
         return 0
-    return 1 if left_pixels > right_pixels else -1
+    return -1 if left_pixels > right_pixels else 1
 
 
 def thread_arrow(robot, interval):
