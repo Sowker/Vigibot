@@ -3,18 +3,22 @@ import numpy as np
 import time
 import logger 
 # from t11_robot import Robot
+from picamera2 import Picamera2
 
-cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
+picam = Picamera2()
+picam.configure(picam.create_preview_configuration(
+    main={"format": "RGB888", "size": (640, 480)}
+))
+picam.start()
+ 
 def thread_arrow(robot,interval) : 
     log = logger.get_logger("ARROW") 
     while True : 
         with robot.state.lock : 
             if not robot.state.running : 
                 break
-        ret, frame = cap.read()
-        if not ret : 
-            time.sleep(interval)
-            continue
+        frame = picam.capture_array()
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         #Détection de la fleche a faire
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -55,27 +59,23 @@ def thread_arrow(robot,interval) :
         cv2.waitKey(1)
 
         time.sleep(interval)
-    cap.release()
+    picam.stop()
     cv2.destroyAllWindows()
-    log.info("Thread arrêté") 
-    
-if __name__ == "__main__" : 
-    if not cap.isOpened():
-        print("Erreur : caméra non disponible")
-    else :
-        while True : 
-            ret,frame = cap.read() 
-            if not ret : 
-                continue
-            gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-            blurred = cv2.GaussianBlur(gray, (5,5),0) 
-            _, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
+    log.info("Thread arrêté")
 
-            cv2.imshow("Camera", frame)    # image normale
-            cv2.imshow("Seuillage", thresh) # ce que le code voit
+if __name__ == "__main__" :
+    while True :
+        frame = picam.capture_array()
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5,5),0)
+        _, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+        cv2.imshow("Camera", frame)
+        cv2.imshow("Seuillage", thresh)
 
-    cap.release()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    picam.stop()
     cv2.destroyAllWindows()
