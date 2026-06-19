@@ -130,7 +130,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
             if not robot.state.running:
                 break
             emergency = robot.state.emergency_stop
-            action    = robot.state.line_action
 
         # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
         if emergency:
@@ -140,49 +139,47 @@ def thread_controller(robot: Robot, interval: float) -> None:
             time.sleep(interval)
             continue
 
-        # ── Suivi de cercle décodé (Priorité 2) ────────────────────
-        
-        if action == CirclePosition.STRAIGHT:
-            # Ligne au milieu → tout droit
+        # Lire les capteurs bruts (gauche, milieu, droit)
+        left, middle, right = robot.line_tracker.read()
+        left, middle, right = int(left), int(middle), int(right)
+
+        # Comportement d'EVITEMENT (s'inspire de t7 mais inversé)
+        # Priorité : détection droite -> tourner à gauche; détection gauche -> tourner à droite
+        if right and not middle:
+            # Approche depuis la droite -> tourner doucement à gauche
+            robot.head.steer_left(15)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            log.debug("Capteur droit actif -> virage doux gauche")
+
+        elif right and middle:
+            # Trop à droite -> tourner fort à gauche
+            robot.head.steer_left(35)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            log.debug("Capteur droit+milieu actifs -> virage fort gauche")
+
+        elif left and not middle:
+            # Approche depuis la gauche -> tourner doucement à droite
+            robot.head.steer_right(15)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            log.debug("Capteur gauche actif -> virage doux droite")
+
+        elif left and middle:
+            # Trop à gauche -> tourner fort à droite
+            robot.head.steer_right(35)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            log.debug("Capteur gauche+milieu actifs -> virage fort droite")
+
+        elif middle and not (left or right):
+            # Ligne centrée -> tout droit
+            robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            log.debug("Capteur milieu actif -> tout droit")
+
+        else:
+            # Aucun capteur -> avancer doucement ou chercher
             robot.head.steer_center()
-            log.debug("→ Tout droit")
-
-        elif action == CirclePosition.TURN_LEFT_SOFT:
-            # Ligne à droite seulement → tourner doux à gauche
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
-            robot.head.steer_left(intensity=15)
-            log.debug("↖ Tourner doux à gauche")
-
-        elif action == CirclePosition.TURN_LEFT_HARD:
-            # Ligne à droite + milieu → tourner fort à gauche
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
-            robot.head.steer_left(intensity=35)
-            log.debug("⬅ Tourner fort à gauche")
-
-        elif action == CirclePosition.TURN_RIGHT_SOFT:
-            # Ligne à gauche seulement → tourner doux à droite
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
-            robot.head.steer_right(intensity=15)
-            log.debug("↗ Tourner doux à droite")
-
-        elif action == CirclePosition.TURN_RIGHT_HARD:
-            # Ligne à gauche + milieu → tourner fort à droite
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
-            robot.head.steer_right(intensity=35)
-            log.debug("➡ Tourner fort à droite")
-
-        elif action == CirclePosition.INTERSECTION:
-            # Tous les capteurs → ambiguïté, avancer prudemment
-            robot.motor.drive(Direction.FORWARD, SPEED_ADJUSTING_PCT)
-            robot.head.steer_center()
-            log.debug("➕ Ambiguïté - avancer prudemment")
-
-        elif action == CirclePosition.LOST_IN_CENTER:
-            # Aucun capteur → perdu au centre, chercher la ligne
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-            robot.head.steer_center()
-            log.warning("❓ Perdu au centre du cercle")
+            log.debug("Aucun capteur actif -> avancer (centre)")
 
         time.sleep(interval)
 

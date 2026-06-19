@@ -35,6 +35,7 @@ if __name__ == "__main__":
     robot.init()
 
     threads = [
+        threading.Thread(target=thread_line, args=(robot, args.sensor_interval), name="LINE", daemon=True),
         threading.Thread(target=thread_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
     ]
 
