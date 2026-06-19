@@ -164,12 +164,14 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
     while True:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
-
-        min_dist = min(scan)
-        if min_dist <= 20:
-            robot.motor.stop()
+        if scan:
+            min_dist = min(scan)
+            if min_dist <= 20:
+                robot.motor.stop()
+            else:
+                robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         else:
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            print("no data yet")
 
 
         time.sleep(120)
