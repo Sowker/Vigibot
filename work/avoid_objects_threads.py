@@ -1,6 +1,8 @@
 import time
 from typing import Optional
 
+from OpenGL.raw.GLES2.OES import texture_half_float_linear
+
 from t11_robot import Robot
 import logger
 
@@ -26,21 +28,36 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 #  THREADS
 # ═══════════════════════════════════════════════════════════════════
 
+scan = []
+
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle et met à jour RobotState."""
     log = logger.get_logger("US")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
+    global scan
+    def scan_20() -> list:
+        HR_MOTOR = 1
+        VR_MOTOR = 2
+        data = []
+        start_position = HEAD_ANGLE_CENTER+10
+        end_position = HEAD_ANGLE_CENTER-10
+        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5)
+        robot.head.set_angle_motor(HR_MOTOR, start_position)
+        time.sleep(0.3)
+        for angle in range(start_position, end_position-1, -1):
+            robot.head.set_angle_motor(HR_MOTOR, angle)
+            time.sleep(0.01)
+            data.append(robot.ultrasonic.read_mm())
+        time.sleep(1)
+        robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
+        return data
 
     while True:
         with robot.state.lock:
             if not robot.state.running:
                 break
 
-        dist_mm = robot.ultrasonic.read_mm()
-
-        with robot.state.lock:
-            robot.state.distance_mm    = dist_mm
-            robot.state.emergency_stop = dist_mm < robot._obstacle_threshold_mm
+        scan = scan_20()
 
         time.sleep(interval)
 
@@ -123,56 +140,36 @@ def thread_controller(robot: Robot, interval: float) -> None:
     """
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-
-    def scan_180() -> list:
-        HR_MOTOR = 1
-        VR_MOTOR = 2
-        data = []
-        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+10)
-        robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_MAX)
-        time.sleep(0.3)
-        for angle in range(HEAD_ANGLE_MAX, HEAD_ANGLE_MIN-1, -1):
-            robot.head.set_angle_motor(HR_MOTOR, angle)
-            time.sleep(0.01)
-            data.append(robot.ultrasonic.read_mm())
-        time.sleep(1)
-        robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
-        return data
-
-    while True:
-        # ── Lecture atomique de l'état simplifié ──────────────────
-        with robot.state.lock:
-            if not robot.state.running:
-                break
-            emergency = robot.state.emergency_stop
-            action    = robot.state.line_action
-            maneuver = robot.state.maneuver
-
-        # ── Arrêt d'urgence obstacle (Priorité 1) ─────────────────
-        if emergency:
-            robot.motor.stop()
-            robot.head.steer_center()
-            log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
-            time.sleep(interval)
-            continue
+    global scan
+    # def scan_180() -> list:
+    #     HR_MOTOR = 1
+    #     VR_MOTOR = 2
+    #     data = []
+    #     robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5)
+    #     robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_MAX)
+    #     time.sleep(0.3)
+    #     for angle in range(HEAD_ANGLE_MAX, HEAD_ANGLE_MIN-1, -1):
+    #         robot.head.set_angle_motor(HR_MOTOR, angle)
+    #         time.sleep(0.01)
+    #         data.append(robot.ultrasonic.read_mm())
+    #     time.sleep(1)
+    #     robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
+    #     return data
+    #
+    # def get_nearest_object_angle(scan : list):
+    #     min_val = min(scan)
+    #     max_id = scan.index(min_val)
+    #     nearest_object_angle = HEAD_ANGLE_MAX - max_id + HEAD_ANGLE_MIN
+    #     return nearest_object_angle
 
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
 
+        min_dist = min(scan)
+        if min_dist <= 20:
+            robot.motor.stop()
+        else:
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
 
-        scan = scan_180()
-        # print(scan)
-
-
-        max_val = min(scan)
-        max_id = scan.index(max_val)
-
-        nearest_object_angle = HEAD_ANGLE_MAX - max_id + HEAD_ANGLE_MIN
-
-        robot.head.set_angle_motor(1, nearest_object_angle)
-
-        print(max_val)
-        print(max_id)
-        print(nearest_object_angle)
 
         time.sleep(120)
 
