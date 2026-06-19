@@ -173,9 +173,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
         else:
             print("no data yet")
 
-
-        time.sleep(120)
-
         # sleep_time = 2
         #
         # robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
