@@ -162,6 +162,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
     #     nearest_object_angle = HEAD_ANGLE_MAX - max_id + HEAD_ANGLE_MIN
     #     return nearest_object_angle
 
+    while True:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
 
         min_dist = min(scan)
