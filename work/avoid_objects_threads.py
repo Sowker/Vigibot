@@ -35,7 +35,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
     log = logger.get_logger("US")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
-    def scan_20() -> list:
+    def scan_20_cm() -> list:
         HR_MOTOR = 1
         VR_MOTOR = 2
         data = []
@@ -47,8 +47,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         for angle in range(start_position, end_position-1, -1):
             robot.head.set_angle_motor(HR_MOTOR, angle)
             time.sleep(0.01)
-            data.append(robot.ultrasonic.read_mm())
-        time.sleep(1)
+            data.append(robot.ultrasonic.read_mm()/10)
         robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
         return data
 
@@ -57,10 +56,10 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
             if not robot.state.running:
                 break
 
-        scan = scan_20()
+        scan = scan_20_cm()
         print("scan in ultra", scan)
 
-        time.sleep(interval)
+        # time.sleep(interval)
 
     log.info("Thread arrêté")
 
