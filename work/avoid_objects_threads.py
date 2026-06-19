@@ -58,6 +58,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
                 break
 
         scan = scan_20()
+        print("scan in ultra", scan)
 
         time.sleep(interval)
 
@@ -163,6 +164,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
     #     return nearest_object_angle
 
     while True:
+        print("scan in controller", scan)
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if scan:
             min_dist = min(scan)
