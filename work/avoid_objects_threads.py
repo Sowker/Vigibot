@@ -148,37 +148,37 @@ def thread_controller(robot: Robot, interval: float) -> None:
         if right and not middle:
             # Approche depuis la droite -> tourner doucement à gauche
             robot.head.steer_left(15)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             log.debug("Capteur droit actif -> virage doux gauche")
 
         elif right and middle:
             # Trop à droite -> tourner fort à gauche
             robot.head.steer_left(35)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             log.debug("Capteur droit+milieu actifs -> virage fort gauche")
 
         elif left and not middle:
             # Approche depuis la gauche -> tourner doucement à droite
             robot.head.steer_right(15)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             log.debug("Capteur gauche actif -> virage doux droite")
 
         elif left and middle:
             # Trop à gauche -> tourner fort à droite
             robot.head.steer_right(35)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             log.debug("Capteur gauche+milieu actifs -> virage fort droite")
 
         elif middle and not (left or right):
             # Ligne centrée -> tout droit
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
             log.debug("Capteur milieu actif -> tout droit")
 
         else:
             # Aucun capteur -> avancer doucement ou chercher
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
             log.debug("Aucun capteur actif -> avancer (centre)")
 
         time.sleep(interval)
