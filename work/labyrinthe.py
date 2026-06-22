@@ -35,6 +35,7 @@ if __name__ == "__main__":
 
     robot = Robot(args)
     robot.init()
+    robot.head.set_angle_motor(2, 110)
 
     threads = [
         threading.Thread(target=thread_ultrasonic, args=(robot, args.sensor_interval), name="US", daemon=True),

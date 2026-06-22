@@ -3,6 +3,7 @@ from typing import Optional
 
 from t11_robot import Robot
 import logger
+logger.get_logger().propagate = False
 
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
@@ -50,8 +51,10 @@ def L_turn(robot : Robot, direction : str) -> None:
 def thread_drive(robot: Robot, interval: float) -> None:
     log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-
+    print("Before")
     while True:
+        print("In")
+
         # ── 1. Lecture de l'état actuel ───────────────────────────
         with robot.state.lock:
             if not robot.state.running:
@@ -60,6 +63,7 @@ def thread_drive(robot: Robot, interval: float) -> None:
 
         # ── 2. Gestion de l'urgence (Priorité Absolue) ────────────
         if emergency:
+            print("Emergency")
             robot.motor.stop()
             robot.head.steer_center()
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")

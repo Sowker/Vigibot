@@ -8,10 +8,13 @@ def get_direction():
     picam.configure(picam.create_preview_configuration())
     picam.start()
 
-    # Read the first frame to get the camera dimensions
-    ret, prev_frame = picam.capture_array()
-    if not ret:
-        raise RuntimeError("Could not read first frame")
+    try:
+        # capture_array() returns the array directly, NOT a tuple!
+        prev_frame = picam.capture_array()
+    except Exception as e:
+        picam.stop()
+        print("azerftg")
+        raise RuntimeError(f"Could not read first frame: {e}")
 
     # Get height and width of the camera feed
     h, w = prev_frame.shape[:2]
