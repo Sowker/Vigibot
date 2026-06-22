@@ -3,11 +3,10 @@ import numpy as np
 from picamera2 import Picamera2
 
 def get_direction():
-    # Open the default camera (0)
-    cap = picamera2.capture_array()
-
-    if not cap.isOpened():
-        raise RuntimeError("Could not open camera")
+    # Initialize Picamera2
+    picam = Picamera2()
+    picam.configure(picam.create_preview_configuration())
+    picam.start()
 
     # Read the first frame to get the camera dimensions
     ret, prev_frame = picam.capture_array()
