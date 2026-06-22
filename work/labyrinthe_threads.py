@@ -51,10 +51,7 @@ def L_turn(robot : Robot, direction : str) -> None:
 def thread_drive(robot: Robot, interval: float) -> None:
     log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-    print("Before")
     while True:
-        print("In")
-
         # ── 1. Lecture de l'état actuel ───────────────────────────
         with robot.state.lock:
             if not robot.state.running:
@@ -63,7 +60,6 @@ def thread_drive(robot: Robot, interval: float) -> None:
 
         # ── 2. Gestion de l'urgence (Priorité Absolue) ────────────
         if emergency:
-            print("Emergency")
             robot.motor.stop()
             robot.head.steer_center()
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
@@ -94,7 +90,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         with robot.state.lock:
             robot.state.distance_mm = dist_mm
             # Déclenche l'arrêt d'urgence si la distance est sous le seuil critique
-            robot.state.emergency_stop = dist_mm < 30
+            robot.state.emergency_stop = dist_mm < 300
 
         time.sleep(interval)
 

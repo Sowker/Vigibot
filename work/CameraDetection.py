@@ -13,7 +13,6 @@ def get_direction():
         prev_frame = picam.capture_array()
     except Exception as e:
         picam.stop()
-        print("azerftg")
         raise RuntimeError(f"Could not read first frame: {e}")
 
     # Get height and width of the camera feed
@@ -29,8 +28,10 @@ def get_direction():
     upper_black = np.array([255, 255, 50])
 
     while True:
-        ret, default_frame = picam.capture_array()
-        if not ret:
+        try:
+            default_frame = picam.capture_array()
+        except RuntimeError as e:
+            print(f"Failed to capture frame in loop: {e}")
             break
 
         # Appy Gaussian Blur
@@ -154,5 +155,5 @@ def get_direction():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    cap.release()
+    picam.stop()
     cv2.destroyAllWindows()
