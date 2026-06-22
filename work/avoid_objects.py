@@ -14,7 +14,7 @@ from adafruit_pca9685 import PCA9685
 import logger
 from t11_argument_parser import parse_args
 from t11_robot import Robot
-from avoid_objects_threads import thread_ultrasonic, thread_line, thread_LED, thread_controller
+from avoid_objects_threads import thread_ultrasonic, thread_controller
 
 # ═══════════════════════════════════════════════════════════════════
 #  POINT D'ENTRÉE
