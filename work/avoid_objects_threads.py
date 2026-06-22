@@ -71,7 +71,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
     global scan
 
     while True:
-        print("scan in controller", scan)
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if scan:
             min_dist = min(scan)
