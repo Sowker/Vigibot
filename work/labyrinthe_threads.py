@@ -65,6 +65,8 @@ def thread_drive(robot: Robot, interval: float) -> None:
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             direction = get_arrow_derection()
             L_turn(direction)
+        robot.head.steer_center()
+        robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
