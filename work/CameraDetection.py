@@ -1,15 +1,16 @@
 import cv2
 import numpy as np
+from picamera2 import Picamera2
 
 def get_direction():
     # Open the default camera (0)
-    cap = cv2.VideoCapture(0)
+    cap = picamera2.capture_array()
 
     if not cap.isOpened():
         raise RuntimeError("Could not open camera")
 
     # Read the first frame to get the camera dimensions
-    ret, prev_frame = cap.read()
+    ret, prev_frame = picam.capture_array()
     if not ret:
         raise RuntimeError("Could not read first frame")
 
@@ -26,7 +27,7 @@ def get_direction():
     upper_black = np.array([255, 255, 50])
 
     while True:
-        ret, default_frame = cap.read()
+        ret, default_frame = picam.capture_array()
         if not ret:
             break
 
