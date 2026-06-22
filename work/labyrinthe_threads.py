@@ -90,7 +90,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         with robot.state.lock:
             robot.state.distance_mm = dist_mm
             # Déclenche l'arrêt d'urgence si la distance est sous le seuil critique
-            robot.state.emergency_stop = dist_mm < robot._obstacle_threshold_mm
+            robot.state.emergency_stop = dist_mm < 30
 
         time.sleep(interval)
 

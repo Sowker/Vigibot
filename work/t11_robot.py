@@ -76,6 +76,7 @@ class Robot:
 
         self._log.info("Initialisation des LEDs avant…")
         self.front_leds = FrontLEDs()
+        self.head.set_angle_motor(2,110)
 
     def init(self) -> None:
         self._log.info("══ Mise à zéro initiale ══")
