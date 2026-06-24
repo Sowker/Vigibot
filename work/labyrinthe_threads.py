@@ -1,5 +1,6 @@
 import time
 from typing import Optional
+from picamera2 import Picamera2
 
 from t11_robot import Robot
 import logger
@@ -9,14 +10,14 @@ from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORM
 
 from CameraDetection import get_direction, init_camera, shutdown
 
-def get_arrow_derection()->Direction:
-    camera = init_camera()
+def get_arrow_derection(camera : Picamera2)->Direction:
     direction = 0
     for i in range(10):
-       if get_direction(camera) == "left":
-           direction -= 1
-       else:
-           direction += 1
+        if get_direction(camera) == "left":
+            direction -= 1
+        else:
+            direction += 1
+
     if direction > 0:
         # On average we detected that we need to turn right
         return "right"
@@ -26,29 +27,31 @@ def get_arrow_derection()->Direction:
         return "straight"
 
 def L_turn(robot : Robot, direction : str) -> None:
+    robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+    time.sleep(0.2)
     if direction == "left":
-        for i in range(2):
+        for i in range(3):
             robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            time.sleep(0.2)
+            robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+            time.sleep(0.3)
 
-            robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-            time.sleep(0.2)
+            robot.head.steer_right(STEER_HARD_DEG)
+            robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
+            time.sleep(0.3)
 
     elif direction == "right":
-        for i in range(2):
+        for i in range(3):
             robot.head.steer_right(STEER_HARD_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            time.sleep(0.2)
+            robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+            time.sleep(0.3)
 
             robot.head.steer_left(STEER_HARD_DEG)
-            robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
-            time.sleep(0.2)
+            robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
+            time.sleep(0.3)
     else:
         pass
 
-def thread_drive(robot: Robot, interval: float) -> None:
+def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
     log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     while True:
@@ -63,8 +66,8 @@ def thread_drive(robot: Robot, interval: float) -> None:
             robot.motor.stop()
             robot.head.steer_center()
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
-            direction = get_arrow_derection()
-            L_turn(direction)
+            direction = get_arrow_derection(camera)
+            L_turn(robot, direction)
         robot.head.steer_center()
         robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 

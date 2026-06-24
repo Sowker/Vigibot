@@ -87,7 +87,7 @@ def get_direction(picam : Picamera2):
             x_min, x_max = x_coords[0], x_coords[-1]
             y_min, y_max = y_coords[0], y_coords[-1]
 
-            print(f"White detected: x({x_min}-{x_max}), y({y_min}-{y_max})")
+            # print(f"White detected: x({x_min}-{x_max}), y({y_min}-{y_max})")
             box_width = x_max - x_min
             box_height = y_max - y_min
             if box_width < 10 or box_height < 10:

@@ -10,12 +10,14 @@ import logging
 from board import SCL, SDA
 import busio
 from adafruit_pca9685 import PCA9685
+from picamera2 import Picamera2
 
 # imports from helpers and tasks
 from t11_argument_parser import parse_args
 import logger
 from t11_robot import Robot
 from labyrinthe_threads import thread_drive, thread_ultrasonic
+from CameraDetection import init_camera, shutdown
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -36,10 +38,11 @@ if __name__ == "__main__":
     robot = Robot(args)
     robot.init()
     robot.head.set_angle_motor(2, 110)
+    camera = init_camera()
 
     threads = [
         threading.Thread(target=thread_ultrasonic, args=(robot, args.sensor_interval), name="US", daemon=True),
-        threading.Thread(target=thread_drive, args=(robot, args.sensor_interval), name="Drive", daemon=True)
+        threading.Thread(target=thread_drive, args=(robot, args.sensor_interval, camera), name="Drive", daemon=True)
     ]
 
     for t in threads:
@@ -65,6 +68,7 @@ if __name__ == "__main__":
                 log.warning("Thread %s ne s'est pas arrêté dans le délai", t.name)
 
         robot.shutdown()
+        shutdown(camera)
 
     log.info("Programme terminé. Au revoir !")
     log.info("Program developed by Team C — MasterCamp SE 2026.")
