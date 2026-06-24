@@ -138,26 +138,23 @@ def get_direction(picam : Picamera2):
                     # cv2.imshow('Right', left_img)
                     # cv2.imshow('Left', right_img)
 
-                    # Create mask for the white color
-                    mask_left = mask[:, :cX]
-                    mask_right = mask[:, cX:]
+                    left_img = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
+                    right_img = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
-                    # perform the mask on the separated image to analyze them separatly and compare them
-                    res_left = cv2.bitwise_and(left_img, left_img, mask=mask_left)
-                    res_right = cv2.bitwise_and(right_img, right_img, mask=mask_right)
+                    left_result = cv2.goodFeaturesToTrack(left_img, 10, 0.1, 10)
+                    right_result = cv2.goodFeaturesToTrack(right_img, 10, 0.1, 10)
 
-                    # count the white to know the side of the arrow
-                    black_pixel_left = cv2.countNonZero(mask_left)
-                    black_pixel_right = cv2.countNonZero(mask_right)
+                    left_result = np.int32(left_result)
+                    right_result = np.int32(right_result)
 
-                    if black_pixel_left > black_pixel_right:
-                        print("left")
+                    if len(left_result) > len(right_result):
+                        print("Vertice detection : left")
                         return "left"
-                    elif black_pixel_right > black_pixel_left:
-                        print("right")
+                    elif len(left_result) < len(right_result):
+                        print("Vertice detection : right")
                         return "right"
                     else:
-                        print("Mask error")
+                        print("Bit error")
 
         # Wait for 1 ms, and check if 'q' is pressed to quit
         # if cv2.waitKey(1) & 0xFF == ord('q'):
