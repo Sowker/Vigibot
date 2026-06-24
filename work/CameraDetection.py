@@ -37,7 +37,7 @@ def get_direction():
         # Appy Gaussian Blur
         default_frame = cv2.GaussianBlur(default_frame, (15, 15), 0)
 
-        cv2.imshow('Default frame', default_frame)
+        # cv2.imshow('Default frame', default_frame)
 
         # ==== To Fine tune ====
         # Crop the image by 10% - on each side - to focus on the center
@@ -73,7 +73,7 @@ def get_direction():
         # Verify that the matrice x and y hold white because we want to detect them
         if not(x_coords.size > 0 and y_coords.size > 0):
             print("No white detected on the image.")
-            cv2.imshow('Raw image', default_frame)
+            # cv2.imshow('Raw image', default_frame)
 
         elif x_coords.size > 0 and y_coords.size > 0:
             x_min, x_max = x_coords[0], x_coords[-1]
@@ -86,7 +86,7 @@ def get_direction():
                 print(f"Skipping tiny/invalid frame: x({x_min}-{x_max}), y({y_min}-{y_max})")
 
                 # You still MUST show the camera so it doesn't freeze!
-                cv2.imshow('Raw image', default_frame)
+                # cv2.imshow('Raw image', default_frame)
             else :
 
                 # Draw the rectangle box using the min/max coordinates
@@ -105,8 +105,8 @@ def get_direction():
                 result = cv2.bitwise_and(frame, frame, mask=mask)
 
                 # Display the feeds
-                cv2.imshow('Raw image', frame)
-                cv2.imshow('What is detected', mask)
+                # cv2.imshow('Raw image', frame)
+                # cv2.imshow('What is detected', mask)
 
                 # Calculate the moments of the binary mask
                 moments = cv2.moments(mask)
@@ -152,8 +152,8 @@ def get_direction():
                         print("Mask error")
 
         # Wait for 1 ms, and check if 'q' is pressed to quit
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+            # break
 
     picam.stop()
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()

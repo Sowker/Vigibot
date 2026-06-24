@@ -3,7 +3,6 @@ from typing import Optional
 
 from t11_robot import Robot
 import logger
-logger.get_logger().propagate = False
 
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
