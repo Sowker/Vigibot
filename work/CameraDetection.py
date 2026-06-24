@@ -149,12 +149,34 @@ def get_direction(picam : Picamera2):
 
                     if len(left_result) > len(right_result):
                         print("Vertice detection : left")
+
+                        # Create mask for the white color
+                        mask_left = mask[:, :cX]
+                        mask_right = mask[:, cX:]
+
+                        # perform the mask on the separated image to analyze them separatly and compare them
+                        res_left = cv2.bitwise_and(left_img, left_img, mask=mask_left)
+                        res_right = cv2.bitwise_and(right_img, right_img, mask=mask_right)
+
+                        # count the white to know the side of the arrow
+                        black_pixel_left = cv2.countNonZero(mask_left)
+                        black_pixel_right = cv2.countNonZero(mask_right)
+
+                        if black_pixel_left > black_pixel_right:
+                            print("left")
+                            return "left"
+                        elif black_pixel_right > black_pixel_left:
+                            print("right")
+                            return "right"
+                        else:
+                            print("Mask error")
                         return "left"
                     elif len(left_result) < len(right_result):
                         print("Vertice detection : right")
                         return "right"
                     else:
                         print("Bit error")
+
 
         # Wait for 1 ms, and check if 'q' is pressed to quit
         # if cv2.waitKey(1) & 0xFF == ord('q'):
