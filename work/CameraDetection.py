@@ -2,18 +2,26 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 
-def get_direction():
+def init_camera():
     # Initialize Picamera2
     picam = Picamera2()
     picam.configure(picam.create_preview_configuration())
     picam.start()
 
     try:
-        # capture_array() returns the array directly, NOT a tuple!
+        # capture_array()
         prev_frame = picam.capture_array()
+        return picam
     except Exception as e:
         picam.stop()
         raise RuntimeError(f"Could not read first frame: {e}")
+
+def shutdown(camera : Picamera2):
+    camera.stop()
+
+def get_direction(picam : Picamera2):
+    # capture_array()
+    prev_frame = picam.capture_array()
 
     # Get height and width of the camera feed
     h, w = prev_frame.shape[:2]
@@ -154,6 +162,5 @@ def get_direction():
         # Wait for 1 ms, and check if 'q' is pressed to quit
         # if cv2.waitKey(1) & 0xFF == ord('q'):
             # break
-
-    picam.stop()
+    #picam.stop()
     # cv2.destroyAllWindows()

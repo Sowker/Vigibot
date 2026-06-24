@@ -7,12 +7,13 @@ import logger
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
 
-from CameraDetection import get_direction
+from CameraDetection import get_direction, init_camera, shutdown
 
 def get_arrow_derection()->Direction:
+    camera = init_camera()
     direction = 0
     for i in range(10):
-       if get_direction() == "left":
+       if get_direction(camera) == "left":
            direction -= 1
        else:
            direction += 1
