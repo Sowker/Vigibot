@@ -147,6 +147,15 @@ def get_direction(picam : Picamera2):
                     left_result = np.int32(left_result)
                     right_result = np.int32(right_result)
 
+                    if type(left_result) == None and type(right_result):
+                        print("Error while detecting vertices")
+                        return "left"
+                    if type(right_result) == None:
+                        print("Error while detecting vertices (right)")
+                    elif type(left_result) == None:
+                        print("Error while detecting vertices (left)")
+
+
                     if len(left_result) > len(right_result):
                         print("Vertice detection : left")
 

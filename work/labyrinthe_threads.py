@@ -39,6 +39,10 @@ def L_turn(robot : Robot, direction : str) -> None:
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
             time.sleep(0.3)
 
+        robot.head.steer_left(STEER_HARD_DEG)
+        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+        time.sleep(0.1)
+
     elif direction == "right":
         for i in range(3):
             robot.head.steer_right(STEER_HARD_DEG)
@@ -48,6 +52,10 @@ def L_turn(robot : Robot, direction : str) -> None:
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
             time.sleep(0.3)
+
+        robot.head.steer_right(STEER_HARD_DEG)
+        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+        time.sleep(0.1)
     else:
         pass
 
