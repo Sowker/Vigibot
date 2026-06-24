@@ -162,7 +162,7 @@ def get_direction(picam : Picamera2):
                         black_pixel_left = cv2.countNonZero(mask_left)
                         black_pixel_right = cv2.countNonZero(mask_right)
 
-                        if black_pixel_left > black_pixel_right:
+                        if black_pixel_left < black_pixel_right:
                             print("left")
                             return "left"
                         elif black_pixel_right > black_pixel_left:
