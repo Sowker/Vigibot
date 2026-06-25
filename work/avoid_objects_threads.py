@@ -119,26 +119,31 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
     while True:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
-        if scan:
-            actual_scan = scan
-            min_dist = min(actual_scan)
-            if min_dist <= 20:
-                robot.motor.stop()
-                if should_bypass_right(actual_scan, min_dist):
-                    print("turn right")
-                    pass
-                    # bypass_right(robot)
-                else:
-                    print("turn left")
-                    pass
-                    # bypass_left(robot)
-            else:
-                print("drive")
-                pass
-                # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        else:
-            pass
-            print("no data yet")
+
+        bypass_right(robot)
+        time.sleep(5)
+
+        # DRIVING AVOID OBJECTS LOGIC
+        # if scan:
+        #     actual_scan = scan
+        #     min_dist = min(actual_scan)
+        #     if min_dist <= 20:
+        #         robot.motor.stop()
+        #         if should_bypass_right(actual_scan, min_dist):
+        #             print("turn right")
+        #             pass
+        #             # bypass_right(robot)
+        #         else:
+        #             print("turn left")
+        #             pass
+        #             # bypass_left(robot)
+        #     else:
+        #         print("drive")
+        #         pass
+        #         # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+        # else:
+        #     pass
+        #     print("no data yet")
 
         # time.sleep(interval)
 
