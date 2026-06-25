@@ -83,7 +83,7 @@ def bypass(robot, bypass_direction):
         counter_turn = WHEEL_ANGLE_MAX
         turn = WHEEL_ANGLE_MIN
 
-    sleep_time = 0.5
+    sleep_time = 1
 
     # turn
     robot.head.set_angle_motor(0, turn)
@@ -105,6 +105,8 @@ def bypass(robot, bypass_direction):
     time.sleep(0.5)
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(sleep_time)
+
+    robot.motor.stop()
 
 
 def thread_controller(robot: Robot, interval: float) -> None:
