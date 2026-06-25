@@ -76,6 +76,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
             min_dist = min(scan)
             if min_dist <= 20:
                 robot.motor.stop()
+                print("object close")
             else:
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         else:
