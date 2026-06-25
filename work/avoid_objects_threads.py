@@ -127,15 +127,15 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 if should_bypass_right(actual_scan, min_dist):
                     print("turn right")
                     pass
-                    bypass_right(robot)
+                    # bypass_right(robot)
                 else:
                     print("turn left")
                     pass
-                    bypass_left(robot)
+                    # bypass_left(robot)
             else:
                 print("drive")
                 pass
-                robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+                # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         else:
             pass
             print("no data yet")
