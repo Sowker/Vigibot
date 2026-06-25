@@ -77,19 +77,17 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
             log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             direction = get_arrow_derection(camera)
             L_turn(robot, direction)
-        robot.head.steer_center()
-        robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-
-        #  ── 3. Adjust the position of the robot to be straigth ────────────
-        corretion = adjust_position(camera)
-        if corretion == "left":
-            robot.head.steer_left(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-        elif corretion == "right":
-            robot.head.steer_right(STEER_SOFT_DEG)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
         else:
-            pass
+            #  ── 3. Adjust the position of the robot to be straigth ────────────
+            corretion = adjust_position(camera)
+            if corretion == "left":
+                robot.head.steer_left(STEER_SOFT_DEG)
+                robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            elif corretion == "right":
+                robot.head.steer_right(STEER_SOFT_DEG)
+                robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            else:
+                pass
 
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:

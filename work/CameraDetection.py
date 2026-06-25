@@ -174,7 +174,7 @@ def get_direction(picam : Picamera2):
                     else:
                         print("Bit error")
 
-def adjust_position(cam : Picamera2):
+def adjust_position(picam : Picamera2):
 
     # capture_array()
     prev_frame = picam.capture_array()
@@ -279,10 +279,10 @@ def adjust_position(cam : Picamera2):
                     # absolute middle
                     x_screen = w / 2
 
-                    if x_screen > cX :
+                    if x_screen < cX + 10 or x_screen < cX - 10 :
                         # We need to turn left
                         return "left"
-                    elif x_screen < cX :
+                    elif x_screen > cX + 10 or x_screen > cX - 10 :
                         # We need to turn right
                         return "right"
                     else :
