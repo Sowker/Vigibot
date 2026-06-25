@@ -73,27 +73,9 @@ def should_bypass_right(scan, min_dist):
 
 
 def bypass_right(robot):
-    sleep_time = 2
+    sleep_time = 0.5
 
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-    time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    time.sleep(sleep_time)
-
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-    time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    time.sleep(2*sleep_time)
-
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-    time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    time.sleep(sleep_time)
-
-def bypass_left(robot):
-    sleep_time = 2
-
-    robot.head.set_angle_motor(0,-WHEEL_ANGLE_MAX)
+    robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
     time.sleep(0.5)
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(sleep_time)
@@ -103,7 +85,25 @@ def bypass_left(robot):
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(2*sleep_time)
 
-    robot.head.set_angle_motor(0,-WHEEL_ANGLE_MAX)
+    robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(sleep_time)
+
+def bypass_left(robot):
+    sleep_time = 2
+
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(sleep_time)
+
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(2*sleep_time)
+
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
     time.sleep(0.5)
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(sleep_time)
