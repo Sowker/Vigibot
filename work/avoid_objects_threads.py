@@ -31,6 +31,9 @@ scan = []
 
 SCAN_ANGLE = 40
 
+TURN_RIGHT = True
+TURN_LEFT = False
+
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle et met à jour RobotState."""
     log = logger.get_logger("US")
@@ -67,46 +70,38 @@ def should_bypass_right(scan, min_dist):
     index = scan.index(min_dist)
     angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
     if angle <= 90:
-        return True
+        return TURN_RIGHT
     else:
-        return False
+        return TURN_LEFT
 
 
-def bypass_right(robot):
-    print("bypass right")
+def bypass(robot, bypass_direction):
+    if bypass_direction == TURN_RIGHT:
+        turn = WHEEL_ANGLE_MAX
+        counter_turn = WHEEL_ANGLE_MIN
+    else:
+        counter_turn = WHEEL_ANGLE_MAX
+        turn = WHEEL_ANGLE_MIN
+
     sleep_time = 0.5
 
-    robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
+    # turn
+    robot.head.set_angle_motor(0, turn)
     time.sleep(0.5)
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(sleep_time)
 
     robot.motor.stop()
 
-    # robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
-    # time.sleep(0.5)
-    # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    # time.sleep(2*sleep_time)
-    #
-    # robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
-    # time.sleep(0.5)
-    # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    # time.sleep(sleep_time)
-
-def bypass_left(robot):
-    sleep_time = 2
-
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-    time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    time.sleep(sleep_time)
-
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    # counter_turn
+    robot.head.set_angle_motor(0, counter_turn)
     time.sleep(0.5)
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(2*sleep_time)
+    robot.motor.stop()
 
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    # realign
+    robot.head.set_angle_motor(0, turn)
     time.sleep(0.5)
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(sleep_time)
@@ -121,9 +116,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
     global scan
 
     while True:
-        # ── Suivi de ligne décodé (Priorité 2) ────────────────────
 
-        bypass_right(robot)
+        bypass(robot, TURN_RIGHT)
+        time.sleep(10)
+        bypass(robot, TURN_LEFT)
         time.sleep(10)
 
         # DRIVING AVOID OBJECTS LOGIC
