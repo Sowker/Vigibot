@@ -1,11 +1,10 @@
 import os
 from pathlib import Path
 
-font_dir = Path("/usr/share/fonts/truetype/dejavu")
-if font_dir.is_dir():
-    os.environ["QT_QPA_FONTDIR"] = str(font_dir)
-
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+# Running headless: force Qt to use offscreen platform to avoid X/Qt errors
+# Remove any existing setting then set to offscreen.
+os.environ.pop("QT_QPA_PLATFORM", None)
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 import cv2
 import numpy as np
