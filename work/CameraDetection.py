@@ -130,7 +130,7 @@ def get_direction(picam : Picamera2):
                     right_img = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
                     left_result = cv2.goodFeaturesToTrack(left_img, 10, 0.1, 10)
-                    right_rwesult = cv2.goodFeaturesToTrack(right_img, 10, 0.1, 10)
+                    right_result = cv2.goodFeaturesToTrack(right_img, 10, 0.1, 10)
 
                     left_result = np.int32(left_result)
                     right_result = np.int32(right_result)
