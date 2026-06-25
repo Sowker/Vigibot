@@ -73,6 +73,7 @@ def should_bypass_right(scan, min_dist):
 
 
 def bypass_right(robot):
+    print("bypass right")
     sleep_time = 0.5
 
     robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
@@ -80,15 +81,17 @@ def bypass_right(robot):
     robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
     time.sleep(sleep_time)
 
-    robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
-    time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    time.sleep(2*sleep_time)
+    robot.motor.stop()
 
-    robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
-    time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-    time.sleep(sleep_time)
+    # robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
+    # time.sleep(0.5)
+    # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    # time.sleep(2*sleep_time)
+    #
+    # robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
+    # time.sleep(0.5)
+    # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    # time.sleep(sleep_time)
 
 def bypass_left(robot):
     sleep_time = 2
@@ -121,7 +124,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
 
         bypass_right(robot)
-        time.sleep(5)
+        time.sleep(10)
 
         # DRIVING AVOID OBJECTS LOGIC
         # if scan:
