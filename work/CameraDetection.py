@@ -136,14 +136,6 @@ def get_direction(picam : Picamera2):
                     """
                 SEUIL_NOIR = 80
 
-                print("Recherche de la flèche principale lancée. Appuyez sur 'q' pour quitter.")
-
-
-                ret, frame = cap.read()
-                if not ret or frame is None:
-                    print("Erreur de capture vidéo.")
-                    break
-
                 output_frame = frame.copy()
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
