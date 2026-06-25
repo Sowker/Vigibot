@@ -19,6 +19,37 @@ def init_camera():
 def shutdown(camera : Picamera2):
     camera.stop()
 
+def analyze_arrow_contours(approx_polygon):
+    """
+    Analyse géométrique des sommets pour déterminer l'orientation de la flèche.
+    Calcule le centre de masse et trouve le sommet le plus excentré (la pointe).
+    """
+    points = [tuple(pt[0]) for pt in approx_polygon]
+
+    all_x = [p[0] for p in points]
+    all_y = [p[1] for p in points]
+
+    center_x = int(float(np.mean(all_x)))
+    center_y = int(float(np.mean(all_y)))
+    center = (center_x, center_y)
+
+    min_x_pt = min(points, key=lambda p: p[0])  # Le point le plus à gauche de la flèche
+    max_x_pt = max(points, key=lambda p: p[0])  # Le point le plus à droite de la flèche
+
+    dist_gauche = abs(min_x_pt[0] - center_x)
+    dist_droite = abs(max_x_pt[0] - center_x)
+
+    if dist_gauche > dist_droite:
+        pointe = (int(min_x_pt[0]), int(min_x_pt[1]))
+        direction = "left"
+    else:
+        pointe = (int(max_x_pt[0]), int(max_x_pt[1]))
+        direction = "right"
+
+    # On retourne la décision, les coordonnées de la pointe et celles du centre
+    return direction, pointe, center
+
+
 def get_direction(picam : Picamera2):
     # capture_array()
     prev_frame = picam.capture_array()
@@ -99,80 +130,68 @@ def get_direction(picam : Picamera2):
                 # Cut the frame to only have the white
                 frame = frame[y_min:y_max, x_min:x_max]
 
-                # Convert the new cropped frame from RGB to HSV format
-                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                """
+                    Boucle principale : capture les images, isole la flèche noire par seuillage binaire,
+                    sélectionne le meilleur contour par score géométrique et affiche les résultats.
+                    """
+                SEUIL_NOIR = 80
 
-                # Create mask for the black color
-                mask = cv2.inRange(hsv, lower_black, upper_black)
-
-                # Filter the black part
-                result = cv2.bitwise_and(frame, frame, mask=mask)
-
-                # Calculate the moments of the binary mask
-                moments = cv2.moments(mask)
-
-                # Prevent division by zero
-                if moments["m00"] == 0:
-                    pass
-                elif moments["m00"] != 0:
-                    # Calculate X and Y coordinates of the center
-                    cX = int(moments["m10"] / moments["m00"])
-                    cY = int(moments["m01"] / moments["m00"])
-
-                    # Optional: Draw a red dot on the result image to visualize it
-                    cv2.circle(result, (cX, cY), 5, (0, 0, 255), -1)
-
-                    # Cut the image in half in function of the middle of the arrow
-                    left_img = frame[:,:cX]
-                    right_img = frame[:,cX:]
-
-                    left_img = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
-                    right_img = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
-
-                    left_result = cv2.goodFeaturesToTrack(left_img, 10, 0.1, 10)
-                    right_result = cv2.goodFeaturesToTrack(right_img, 10, 0.1, 10)
-
-                    left_result = np.int32(left_result)
-                    right_result = np.int32(right_result)
-
-                    if type(left_result) == None and type(right_result):
-                        print("Error while detecting vertices")
-                        return "left"
-                    if type(right_result) == None:
-                        print("Error while detecting vertices (right)")
-                    elif type(left_result) == None:
-                        print("Error while detecting vertices (left)")
+                print("Recherche de la flèche principale lancée. Appuyez sur 'q' pour quitter.")
 
 
-                    if len(left_result) > len(right_result):
-                        print("Vertice detection : left")
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    print("Erreur de capture vidéo.")
+                    break
 
-                        # Create mask for the white color
-                        mask_left = mask[:, :cX]
-                        mask_right = mask[:, cX:]
+                output_frame = frame.copy()
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+                _, black_mask = cv2.threshold(blurred, SEUIL_NOIR, 255, cv2.THRESH_BINARY_INV)
 
-                        # perform the mask on the separated image to analyze them separatly and compare them
-                        res_left = cv2.bitwise_and(left_img, left_img, mask=mask_left)
-                        res_right = cv2.bitwise_and(right_img, right_img, mask=mask_right)
+                # Éliminer les bruits de pixels blancs isolés et lisser les bordures
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
 
-                        # count the white to know the side of the arrow
-                        black_pixel_left = cv2.countNonZero(mask_left)
-                        black_pixel_right = cv2.countNonZero(mask_right)
+                contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-                        if black_pixel_left < black_pixel_right:
-                            print("left")
-                            return "left"
-                        elif black_pixel_right > black_pixel_left:
-                            print("right")
-                            return "right"
-                        else:
-                            print("Mask error")
-                        return "left"
-                    elif len(left_result) < len(right_result):
-                        print("Vertice detection : right")
-                        return "right"
-                    else:
-                        print("Bit error")
+                # Variables de mémorisation pour élire la flèche "championne"
+                best_contour = None
+                best_approx = None
+                max_score = -1.0
+
+                for cnt in contours:
+                    area = cv2.contourArea(cnt)
+                    if area > 400:
+
+                        # Calcul du périmètre du contour
+                        peri = cv2.arcLength(cnt, True)
+
+                        # Approximation polygonale
+                        approx = cv2.approxPolyDP(cnt, 0.03 * peri, True)
+                        num_vertices = len(approx)
+
+                        # bonus/pénalités
+                        shape_multiplier = 1.0
+                        if num_vertices == 7:
+                            shape_multiplier = 3.0  # La forme possède exactement les 7 sommets d'une flèche
+                        elif num_vertices == 6 or num_vertices == 8:
+                            shape_multiplier = 1.5  # La flèche est légèrement déformée par la perspective
+                        elif num_vertices < 5 or num_vertices > 10:
+                            shape_multiplier = 0.1  # La forme n'a aucun rapport avec un polygone de flèche
+
+                        score = area * shape_multiplier
+
+                        if score > max_score:
+                            max_score = score
+                            best_contour = cnt
+                            best_approx = approx
+
+                if best_contour is not None and best_approx is not None:
+                    cv2.drawContours(output_frame, [best_contour], -1, (0, 255, 0), 3)
+                    direction, pointe, center = analyze_arrow_contours(best_approx)
+                    return direction
+
 
 def adjust_position(picam : Picamera2):
 
