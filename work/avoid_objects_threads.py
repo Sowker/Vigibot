@@ -10,6 +10,7 @@ import logger
 from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
 from t6_line_tracking import LinePosition
+from web.app import index
 
 # Constantes
 
@@ -30,6 +31,8 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
 scan = []
 
+SCAN_ANGLE = 40
+
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle et met à jour RobotState."""
     log = logger.get_logger("US")
@@ -39,8 +42,8 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         HR_MOTOR = 1
         VR_MOTOR = 2
         data = []
-        start_position = HEAD_ANGLE_CENTER+10
-        end_position = HEAD_ANGLE_CENTER-10
+        start_position = int(HEAD_ANGLE_CENTER+(SCAN_ANGLE/2))
+        end_position = int(HEAD_ANGLE_CENTER-(SCAN_ANGLE/2))
         robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5)
         robot.head.set_angle_motor(HR_MOTOR, start_position)
         time.sleep(0.3)
@@ -62,6 +65,52 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
 
     log.info("Thread arrêté")
 
+def should_bypass_right(scan, min_dist):
+    index = scan.index(min_dist)
+    angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
+    if angle <= 90:
+        return True
+    else:
+        return False
+
+
+def bypass_right(robot):
+    sleep_time = 2
+
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(sleep_time)
+
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(2*sleep_time)
+
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(sleep_time)
+
+def bypass_left(robot):
+    sleep_time = 2
+
+    robot.head.set_angle_motor(0,-WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(sleep_time)
+
+    robot.head.set_angle_motor(0, -WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(2*sleep_time)
+
+    robot.head.set_angle_motor(0,-WHEEL_ANGLE_MAX)
+    time.sleep(0.5)
+    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    time.sleep(sleep_time)
+
+
 def thread_controller(robot: Robot, interval: float) -> None:
     """
     Boucle de décision : lit l'action synthétisée, décide et pilote les moteurs.
@@ -73,36 +122,26 @@ def thread_controller(robot: Robot, interval: float) -> None:
     while True:
         # ── Suivi de ligne décodé (Priorité 2) ────────────────────
         if scan:
-            min_dist = min(scan)
+            actual_scan = scan
+            min_dist = min(actual_scan)
             if min_dist <= 20:
                 robot.motor.stop()
-                print("object close")
+                if should_bypass_right(actual_scan, min_dist):
+                    print("turn right")
+                    pass
+                    bypass_right(robot)
+                else:
+                    print("turn left")
+                    pass
+                    bypass_left(robot)
             else:
+                print("drive")
+                pass
                 robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
         else:
+            pass
             print("no data yet")
 
-        # sleep_time = 2
-        #
-        # robot.head.set_angle_motor(0,WHEEL_ANGLE_MAX)
-        # time.sleep(0.5)
-        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        # time.sleep(sleep_time)
-        #
-        # robot.head.set_angle_motor(0, WHEEL_ANGLE_MIN)
-        # time.sleep(0.5)
-        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        # time.sleep(2*sleep_time)
-        #
-        # robot.head.set_angle_motor(0, WHEEL_ANGLE_MAX)
-        # time.sleep(0.5)
-        # robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
-        # time.sleep(sleep_time)
-        #
-        # robot.motor.stop()
-        # robot.head.steer_center()
-        # time.sleep(20)
-        #
         # time.sleep(interval)
 
     # ── Arrêt propre en fin de thread ─────────────────────────────
