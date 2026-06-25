@@ -8,7 +8,7 @@ import logger
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
 from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
 
-from CameraDetection import get_direction, init_camera, shutdown
+from CameraDetection import get_direction, init_camera, shutdown, adjust_position
 
 def get_arrow_derection(camera : Picamera2)->Direction:
     direction = 0
@@ -28,34 +28,27 @@ def get_arrow_derection(camera : Picamera2)->Direction:
 
 def L_turn(robot : Robot, direction : str) -> None:
     robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-    time.sleep(0.2)
+    time.sleep(0.03)
     if direction == "left":
-        for i in range(3):
+        for i in range(7):
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.3)
+            time.sleep(0.20)
 
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.3)
+            time.sleep(0.15)
 
-        robot.head.steer_left(STEER_HARD_DEG)
-        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-        time.sleep(0.1)
 
     elif direction == "right":
-        for i in range(3):
+        for i in range(7):
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.3)
+            time.sleep(0.20)
 
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.3)
-
-        robot.head.steer_right(STEER_HARD_DEG)
-        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-        time.sleep(0.1)
+            time.sleep(0.15)
     else:
         pass
 
@@ -79,6 +72,17 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
         robot.head.steer_center()
         robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
+        #  ── 3. Adjust the position of the robot to be straigth ────────────
+        corretion = adjust_position(camera)
+        if corretion == "left":
+            robot.head.steer_left(STEER_SOFT_DEG)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+        elif corretion == "right":
+            robot.head.steer_right(STEER_SOFT_DEG)
+            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+        else:
+            pass
+
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """
@@ -101,7 +105,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         with robot.state.lock:
             robot.state.distance_mm = dist_mm
             # Déclenche l'arrêt d'urgence si la distance est sous le seuil critique
-            robot.state.emergency_stop = dist_mm < 300
+            robot.state.emergency_stop = dist_mm < 250
 
         time.sleep(interval)
 
