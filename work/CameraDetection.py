@@ -41,10 +41,10 @@ def analyze_arrow_contours(approx_polygon):
 
     if dist_gauche > dist_droite:
         pointe = (int(min_x_pt[0]), int(min_x_pt[1]))
-        direction = "left"
+        direction = "right"
     else:
         pointe = (int(max_x_pt[0]), int(max_x_pt[1]))
-        direction = "right"
+        direction = "left"
 
     # On retourne la décision, les coordonnées de la pointe et celles du centre
     return direction, pointe, center

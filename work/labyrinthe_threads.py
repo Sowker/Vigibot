@@ -11,20 +11,7 @@ from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORM
 from CameraDetection import get_direction, init_camera, shutdown, adjust_position
 
 def get_arrow_derection(camera : Picamera2)->Direction:
-    direction = 0
-    for i in range(10):
-        if get_direction(camera) == "left":
-            direction -= 1
-        else:
-            direction += 1
-
-    if direction > 0:
-        # On average we detected that we need to turn right
-        return "right"
-    elif direction < 0:
-        return "left"
-    else:
-        return "straight"
+    return get_direction(camera)
 
 def L_turn(robot : Robot, direction : str) -> None:
     robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
