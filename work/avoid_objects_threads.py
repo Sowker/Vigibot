@@ -120,29 +120,29 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
-
-    while True:
-        # DRIVING AVOID OBJECTS LOGIC
-        if scan:
-            actual_scan = scan
-            min_dist = min(actual_scan)
-            if min_dist <= SCAN_DIST_ACTION:
-                robot.motor.stop()
-                if should_bypass_right(actual_scan, min_dist):
-                    print("turn right")
-                    bypass(robot, TURN_RIGHT)
+    try:
+        while True:
+            # DRIVING AVOID OBJECTS LOGIC
+            if scan:
+                actual_scan = scan
+                min_dist = min(actual_scan)
+                if min_dist <= SCAN_DIST_ACTION:
+                    robot.motor.stop()
+                    if should_bypass_right(actual_scan, min_dist):
+                        print("turn right")
+                        bypass(robot, TURN_RIGHT)
+                    else:
+                        print("turn left")
+                        bypass(robot, TURN_LEFT)
                 else:
-                    print("turn left")
-                    bypass(robot, TURN_LEFT)
+                    print("drive")
+                    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
             else:
-                print("drive")
-                robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
-        else:
-            print("no data yet")
+                print("no data yet")
 
-        time.sleep(interval)
-
-    # ── Arrêt propre en fin de thread ─────────────────────────────
-    robot.motor.stop()
-    robot.head.steer_center()
-    log.info("Thread arrêté")
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        # ── Arrêt propre en fin de thread ─────────────────────────────
+        robot.motor.stop()
+        robot.head.steer_center()
+        log.info("Thread arrêté")
