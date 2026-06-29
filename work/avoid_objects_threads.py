@@ -114,9 +114,12 @@ def bypass(robot, bypass_direction, obj_angle):
 
 def get_absolute_angle(scan, dist):
     idx = scan.index(dist)
-    if idx <= SCAN_ANGLE/2: #right
+    print("idx ", idx)
+    if idx <= SCAN_ANGLE/2: #left
+        print("left")
         return SCAN_ANGLE/2 - idx
-    else: # left
+    else: # right
+        print("right")
         return idx - SCAN_ANGLE/2
 
 
@@ -136,6 +139,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 if min_dist <= SCAN_DIST_ACTION:
                     robot.motor.stop()
                     object_angle = get_absolute_angle(actual_scan, min_dist)
+                    print("min_dist", min_dist)
                     print("object angle ", object_angle)
                     if bypass_side(actual_scan, min_dist) == TURN_RIGHT:
                         print("turn right")
