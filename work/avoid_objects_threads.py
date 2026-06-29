@@ -72,7 +72,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
 def should_bypass_right(scan, min_dist):
     index = scan.index(min_dist)
     angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
-    if angle <= 90:
+    if angle <= HEAD_ANGLE_CENTER:
         return TURN_RIGHT
     else:
         return TURN_LEFT
