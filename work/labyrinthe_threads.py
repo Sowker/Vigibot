@@ -33,11 +33,11 @@ def L_turn(robot : Robot, direction : str) -> None:
         for i in range(7):
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.20)
+            time.sleep(0.25)
 
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.15)
+            time.sleep(0.2)
 
         robot.head.steer_center()
         robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
@@ -48,11 +48,11 @@ def L_turn(robot : Robot, direction : str) -> None:
         for i in range(7):
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.20)
+            time.sleep(0.25)
 
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.15)
+            time.sleep(0.20)
 
         robot.head.steer_center()
         robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
@@ -87,6 +87,7 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
                 robot.head.steer_right(STEER_SOFT_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             else:
+                robot.head.set_angle_motor(1, 94)
                 pass
 
 
