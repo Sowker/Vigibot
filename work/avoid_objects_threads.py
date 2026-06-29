@@ -36,6 +36,7 @@ TURN_RIGHT = True
 TURN_LEFT = False
 
 AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.5
+BYPASS_SPEED = SPEED_NORMAL_PCT
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle et met à jour RobotState."""
@@ -91,7 +92,7 @@ def bypass(robot, bypass_direction):
     # turn
     robot.head.set_angle_motor(0, turn)
     time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
     time.sleep(sleep_time)
 
     robot.motor.stop()
@@ -99,14 +100,14 @@ def bypass(robot, bypass_direction):
     # counter_turn
     robot.head.set_angle_motor(0, counter_turn)
     time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
     time.sleep(2*sleep_time)
     robot.motor.stop()
 
     # realign
     robot.head.set_angle_motor(0, turn)
     time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
     time.sleep(sleep_time)
 
     robot.motor.stop()
