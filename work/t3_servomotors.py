@@ -17,13 +17,13 @@ SERVO_PCA.frequency = 50                 #
 
 
 # Limites angulaires (mécaniques)
-WHEEL_ANGLE_MIN     = 55    # degrés — braquage gauche max
-WHEEL_ANGLE_CENTER  = 93     # degrés — tout droit
-WHEEL_ANGLE_MAX     = 131    # degrés — braquage droite max
+WHEEL_ANGLE_MIN     = 52    # degrés — braquage gauche max
+WHEEL_ANGLE_CENTER  = 90     # degrés — tout droit
+WHEEL_ANGLE_MAX     = 128    # degrés — braquage droite max
 
-HEAD_ANGLE_MIN      = 10     # degrés
-HEAD_ANGLE_CENTER   = 90     # degrés
-HEAD_ANGLE_MAX      = 170    # degrés
+HEAD_ANGLE_MIN      = 13     # degrés
+HEAD_ANGLE_CENTER   = 93     # degrés
+HEAD_ANGLE_MAX      = 173    # degrés
 
 # Pas et délai pour move_to()
 SERVO_STEP_DEG      = 0.5    # degrés par pas (flottant)
