@@ -1,7 +1,4 @@
 import time
-from typing import Optional
-
-from OpenGL.raw.GLES2.OES import texture_half_float_linear
 
 from t11_robot import Robot
 import logger
@@ -87,7 +84,8 @@ def bypass(robot, bypass_direction, obj_angle):
         counter_turn = WHEEL_ANGLE_MAX
         turn = WHEEL_ANGLE_MIN
 
-    sleep_time = 0.1 + 0.05 * (SCAN_ANGLE/2 - obj_angle)
+    sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
+    print("sleep time", sleep_time)
 
     # turn
     robot.head.set_angle_motor(0, turn)
