@@ -30,7 +30,7 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 scan = []
 
 SCAN_ANGLE = 60
-SCAN_DIST_ACTION = 20 # in cm !!!
+SCAN_DIST_ACTION = 30 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
@@ -43,7 +43,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
     log = logger.get_logger("US")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
-    def scan_20_cm() -> list:
+    def scan_cm() -> list:
         HR_MOTOR = 1
         VR_MOTOR = 2
         data = []
@@ -64,7 +64,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
             if not robot.state.running:
                 break
 
-        scan = scan_20_cm()
+        scan = scan_cm()
 
         # time.sleep(interval)
 
