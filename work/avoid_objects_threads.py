@@ -29,7 +29,7 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
 scan = []
 
-SCAN_ANGLE = 45
+SCAN_ANGLE = 60
 SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
@@ -119,7 +119,6 @@ def thread_controller(robot: Robot, interval: float) -> None:
     global scan
 
     while True:
-        print("TEST FULL LOGIC")
         # DRIVING AVOID OBJECTS LOGIC
         if scan:
             actual_scan = scan
