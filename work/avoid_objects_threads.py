@@ -47,8 +47,8 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         HR_MOTOR = 1
         VR_MOTOR = 2
         data = []
-        start_position = int(HEAD_ANGLE_CENTER+(SCAN_ANGLE/2))
-        end_position = int(HEAD_ANGLE_CENTER-(SCAN_ANGLE/2))
+        start_position = int(HEAD_ANGLE_CENTER + (SCAN_ANGLE/2))
+        end_position = int(HEAD_ANGLE_CENTER - (SCAN_ANGLE/2))
         robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5)
         robot.head.set_angle_motor(HR_MOTOR, start_position)
         time.sleep(0.3)
@@ -79,7 +79,7 @@ def bypass_side(scan, min_dist):
         return TURN_RIGHT
 
 
-def bypass(robot, bypass_direction):
+def bypass(robot, bypass_direction, obj_angle):
     if bypass_direction == TURN_RIGHT:
         turn = WHEEL_ANGLE_MIN
         counter_turn = WHEEL_ANGLE_MAX
@@ -87,7 +87,7 @@ def bypass(robot, bypass_direction):
         counter_turn = WHEEL_ANGLE_MAX
         turn = WHEEL_ANGLE_MIN
 
-    sleep_time = 1.2
+    sleep_time = 0.1 + 0.05 * (SCAN_ANGLE/2 - obj_angle)
 
     # turn
     robot.head.set_angle_motor(0, turn)
@@ -112,6 +112,13 @@ def bypass(robot, bypass_direction):
 
     robot.motor.stop()
 
+def get_absolute_angle(scan, dist):
+    idx = scan.index(dist)
+    if idx <= SCAN_ANGLE/2: #right
+        return SCAN_ANGLE/2 - idx
+    else: # left
+        return idx - SCAN_ANGLE/2
+
 
 def thread_controller(robot: Robot, interval: float) -> None:
     """
@@ -128,12 +135,14 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 min_dist = min(actual_scan)
                 if min_dist <= SCAN_DIST_ACTION:
                     robot.motor.stop()
+                    object_angle = get_absolute_angle(actual_scan, min_dist)
+                    print("object angle ", object_angle)
                     if bypass_side(actual_scan, min_dist) == TURN_RIGHT:
                         print("turn right")
-                        bypass(robot, TURN_RIGHT)
+                        bypass(robot, TURN_RIGHT, object_angle)
                     else:
                         print("turn left")
-                        bypass(robot, TURN_LEFT)
+                        bypass(robot, TURN_LEFT, object_angle)
                 else:
                     print("drive")
                     robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
