@@ -15,7 +15,7 @@ from adafruit_pca9685 import PCA9685
 from t11_argument_parser import parse_args
 from t11_robot import Robot
 
-from picam2 import Picamera2
+from picamera2 import Picamera2
 
 class Direction:
     FORWARD = "forward"
@@ -321,7 +321,7 @@ def generate_frames(robot_instance: Robot):
     
 
     picam = Picamera2()
-    config = picam.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+    config = picam.create_video_configuration(main={"size": (640, 480)})
     picam.configure(config)
     picam.start()
     time.sleep(0.1)
