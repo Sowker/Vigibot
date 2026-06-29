@@ -74,9 +74,9 @@ def bypass_side(scan, min_dist):
     index = scan.index(min_dist)
     angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
     if angle <= HEAD_ANGLE_CENTER:
-        return TURN_RIGHT
-    else:
         return TURN_LEFT
+    else:
+        return TURN_RIGHT
 
 
 def bypass(robot, bypass_direction):
