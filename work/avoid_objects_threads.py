@@ -77,13 +77,13 @@ def should_bypass_right(scan, min_dist):
 
 def bypass(robot, bypass_direction):
     if bypass_direction == TURN_RIGHT:
-        turn = WHEEL_ANGLE_MAX
-        counter_turn = WHEEL_ANGLE_MIN
+        turn = WHEEL_ANGLE_MIN
+        counter_turn = WHEEL_ANGLE_MAX
     else:
         counter_turn = WHEEL_ANGLE_MAX
         turn = WHEEL_ANGLE_MIN
 
-    sleep_time = 1.5
+    sleep_time = 1
 
     # turn
     robot.head.set_angle_motor(0, turn)
