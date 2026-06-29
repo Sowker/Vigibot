@@ -290,11 +290,14 @@ def adjust_position(picam : Picamera2):
                     # absolute middle
                     x_screen = w / 2
 
-                    if x_screen > cX + 10 or x_screen > cX - 10 :
-                        # We need to turn right
+                    tolerance = 20
+
+                    if cX > (x_screen + tolerance):
+                        # The object's center is to the right of the screen center
                         return "right"
-                    elif x_screen < cX + 10 or x_screen < cX - 10 :
-                        # We need to turn left
+                    elif cX < (x_screen - tolerance):
+                        # The object's center is to the left of the screen center
                         return "left"
-                    else :
+                    else:
+                        # The object is within the center deadzone
                         return "straight"
