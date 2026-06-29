@@ -83,7 +83,7 @@ def bypass(robot, bypass_direction):
         counter_turn = WHEEL_ANGLE_MAX
         turn = WHEEL_ANGLE_MIN
 
-    sleep_time = 1
+    sleep_time = 1.5
 
     # turn
     robot.head.set_angle_motor(0, turn)
@@ -119,12 +119,15 @@ def thread_controller(robot: Robot, interval: float) -> None:
 
     while True:
 
+        print("TEST BYPASS RIGHT")
         bypass(robot, TURN_RIGHT)
         time.sleep(10)
+        print("TEST BYPASS LEFT")
         bypass(robot, TURN_LEFT)
         time.sleep(10)
 
-        # DRIVING AVOID OBJECTS LOGIC
+        # print("TEST FULL LOGIC")
+        # # DRIVING AVOID OBJECTS LOGIC
         # if scan:
         #     actual_scan = scan
         #     min_dist = min(actual_scan)
@@ -132,12 +135,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
         #         robot.motor.stop()
         #         if should_bypass_right(actual_scan, min_dist):
         #             print("turn right")
-        #             pass
-        #             # bypass_right(robot)
+        #             # bypass(robot, TURN_RIGHT)
         #         else:
         #             print("turn left")
-        #             pass
-        #             # bypass_left(robot)
+        #             # bypass(robot, TURN_LEFT)
         #     else:
         #         print("drive")
         #         pass
@@ -146,7 +147,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
         #     pass
         #     print("no data yet")
 
-        # time.sleep(interval)
+        time.sleep(interval)
 
     # ── Arrêt propre en fin de thread ─────────────────────────────
     robot.motor.stop()
