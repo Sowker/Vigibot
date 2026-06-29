@@ -70,7 +70,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
 
     log.info("Thread arrêté")
 
-def should_bypass_right(scan, min_dist):
+def bypass_side(scan, min_dist):
     index = scan.index(min_dist)
     angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
     if angle <= HEAD_ANGLE_CENTER:
@@ -128,7 +128,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 min_dist = min(actual_scan)
                 if min_dist <= SCAN_DIST_ACTION:
                     robot.motor.stop()
-                    if should_bypass_right(actual_scan, min_dist):
+                    if bypass_side(actual_scan, min_dist) == TURN_RIGHT:
                         print("turn right")
                         bypass(robot, TURN_RIGHT)
                     else:
