@@ -86,7 +86,8 @@ if __name__ == "__main__":
                 time.sleep(1.0)  # laisser le temps à l'alimentation de se stabiliser
 
             picam = Picamera2()
-            picam.configure(picam.create_preview_configuration())
+            config = picam.create_video_configuration(main={"size": (640, 480)})
+            picam.configure(config)
             picam.start()
             time.sleep(0.5)  # attente après l'initialisation
 
@@ -99,7 +100,7 @@ if __name__ == "__main__":
                     break
 
                 # Picamera2 retourne un tableau en RGB
-                hsv_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+                hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
                 mask_blue = apply_mask(hsv_frame, lower_blue, upper_blue)
                 mask_yellow = apply_mask(hsv_frame, lower_yellow, upper_yellow)
