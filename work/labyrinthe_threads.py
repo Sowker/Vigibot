@@ -76,11 +76,11 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
         else:
             #  ── 3. Adjust the position of the robot to be straigth ────────────
             corretion = adjust_position(camera)
-            if corretion == "left":
-                robot.head.set_angle_motor(0, 90 + STEER_SOFT_DEG)
-                robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            elif corretion == "right":
+            if corretion == "right":
                 robot.head.set_angle_motor(0, 90 - STEER_SOFT_DEG)
+                robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            elif corretion == "left":
+                robot.head.set_angle_motor(0, 90 + STEER_SOFT_DEG)
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             else:
                 robot.head.set_angle_motor(1, 100)
