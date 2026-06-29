@@ -292,9 +292,9 @@ def adjust_position(picam : Picamera2):
 
                     if x_screen < cX + 10 or x_screen < cX - 10 :
                         # We need to turn left
-                        return "right"
+                        return "left"
                     elif x_screen > cX + 10 or x_screen > cX - 10 :
                         # We need to turn right
-                        return "left"
+                        return "right"
                     else :
                         return "straight"
