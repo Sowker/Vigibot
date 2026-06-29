@@ -17,14 +17,18 @@ def L_turn(robot : Robot, direction : str) -> None:
     robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
     time.sleep(0.03)
     if direction == "left":
-        for i in range(7):
+        for i in range(6):
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.25)
+            time.sleep(0.20)
 
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.2)
+            time.sleep(0.15)
+
+        robot.head.steer_left(STEER_HARD_DEG)
+        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+        time.sleep(0.20)
 
         robot.head.steer_center()
         robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
@@ -32,14 +36,18 @@ def L_turn(robot : Robot, direction : str) -> None:
 
 
     elif direction == "right":
-        for i in range(7):
+        for i in range(6):
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.25)
+            time.sleep(0.20)
 
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
-            time.sleep(0.20)
+            time.sleep(0.15)
+
+        robot.head.steer_right(STEER_HARD_DEG)
+        robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
+        time.sleep(0.20)
 
         robot.head.steer_center()
         robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
@@ -50,6 +58,7 @@ def L_turn(robot : Robot, direction : str) -> None:
 def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
     log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
+    robot.head.set_angle_motor(0, 85)
     while True:
         # ── 1. Lecture de l'état actuel ───────────────────────────
         with robot.state.lock:
@@ -75,7 +84,8 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             else:
                 robot.head.set_angle_motor(1, 100)
-                pass
+                robot.head.set_angle_motor(0, 85)
+                robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
