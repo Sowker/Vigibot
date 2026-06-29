@@ -8,7 +8,7 @@ import logger
 
 
 from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
-from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
+from t4_dc_motor import Direction, SPEED_NORMAL_PCT
 
 # Constantes
 
@@ -34,6 +34,8 @@ SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
+
+AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.5
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle et met à jour RobotState."""
@@ -89,7 +91,7 @@ def bypass(robot, bypass_direction):
     # turn
     robot.head.set_angle_motor(0, turn)
     time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
     time.sleep(sleep_time)
 
     robot.motor.stop()
@@ -97,14 +99,14 @@ def bypass(robot, bypass_direction):
     # counter_turn
     robot.head.set_angle_motor(0, counter_turn)
     time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
     time.sleep(2*sleep_time)
     robot.motor.stop()
 
     # realign
     robot.head.set_angle_motor(0, turn)
     time.sleep(0.5)
-    robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
     time.sleep(sleep_time)
 
     robot.motor.stop()
@@ -133,7 +135,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     bypass(robot, TURN_LEFT)
             else:
                 print("drive")
-                robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT)
+                robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
         else:
             print("no data yet")
 
