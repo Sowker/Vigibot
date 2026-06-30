@@ -86,7 +86,7 @@ def get_direction(picam : Picamera2):
         # So we can remove unnecessary noise
 
         # Convert the frame from RGB to HSV format
-        hsv = cv2.cvtColor(default_frame, cv2.COLOR_BGR2HSV)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # Create a white mask to focus on what is inside the white part
         mask = cv2.inRange(hsv, lower_white, upper_white)

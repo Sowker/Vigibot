@@ -15,7 +15,7 @@ def get_arrow_derection(camera : Picamera2)->Direction:
 
 def L_turn(robot : Robot, direction : str) -> None:
     robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-    time.sleep(0.03)
+    time.sleep(0.06)
     if direction == "left":
         for i in range(6):
             robot.head.steer_left(STEER_HARD_DEG)
