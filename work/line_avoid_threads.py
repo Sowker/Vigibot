@@ -21,6 +21,19 @@ LINE_LOST_SOUND = "MII"
 CTRL_INTERVAL_S       = 0.05   # s — période du thread contrôleur
 SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
+
+def action_direction(action: LinePosition) -> str:
+    directions = {
+        LinePosition.STRAIGHT: "tout droit",
+        LinePosition.TURN_LEFT_SOFT: "à gauche (léger)",
+        LinePosition.TURN_LEFT_HARD: "à gauche (fort)",
+        LinePosition.TURN_RIGHT_SOFT: "à droite (léger)",
+        LinePosition.TURN_RIGHT_HARD: "à droite (fort)",
+        LinePosition.INTERSECTION: "ambigu",
+        LinePosition.LOST_IN_CENTER: "recherche",
+    }
+    return directions.get(action, "inconnue")
+
 # ═══════════════════════════════════════════════════════════════════
 #  THREADS
 # ═══════════════════════════════════════════════════════════════════
@@ -149,7 +162,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
             middle,
             right,
             current_action.name,
-            current_action.direction,
+            action_direction(current_action),
         )
 
         # Comportement d'EVITEMENT (s'inspire de t7 mais inversé)

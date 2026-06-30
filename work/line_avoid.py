@@ -113,13 +113,22 @@ class CircleTracker:
         """Traduit les 3 valeurs binaires en une action adaptée au cercle."""
         pattern = (left, middle, right)
         action = CircleTracker.TRUTH_TABLE.get(pattern, LinePosition.LOST_IN_CENTER)
+        directions = {
+            LinePosition.STRAIGHT: "tout droit",
+            LinePosition.TURN_LEFT_SOFT: "à gauche (léger)",
+            LinePosition.TURN_LEFT_HARD: "à gauche (fort)",
+            LinePosition.TURN_RIGHT_SOFT: "à droite (léger)",
+            LinePosition.TURN_RIGHT_HARD: "à droite (fort)",
+            LinePosition.INTERSECTION: "ambigu",
+            LinePosition.LOST_IN_CENTER: "recherche",
+        }
         self._log.debug(
             "Table vérité (G=%d M=%d D=%d) -> %s | direction=%s",
             left,
             middle,
             right,
             action.name,
-            action.direction,
+            directions.get(action, "inconnue"),
         )
         return action
 
