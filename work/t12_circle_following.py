@@ -63,10 +63,10 @@ class CircleTracker:
 
     TRUTH_TABLE = {
         (0, 1, 0): CirclePosition.STRAIGHT,        # Milieu seul → tout droit
-        (0, 0, 1): CirclePosition.TURN_LEFT_SOFT,  # Droit seul → doux à gauche
-        (0, 1, 1): CirclePosition.TURN_LEFT_HARD,  # Droit + milieu → fort à gauche
-        (1, 0, 0): CirclePosition.TURN_RIGHT_SOFT, # Gauche seul → doux à droite
-        (1, 1, 0): CirclePosition.TURN_RIGHT_HARD, # Gauche + milieu → fort à droite
+        (0, 0, 1): CirclePosition.TURN_RIGHT_SOFT,  # Droit seul → doux à gauche
+        (0, 1, 1): CirclePosition.TURN_RIGHT_HARD,  # Droit + milieu → fort à gauche
+        (1, 0, 0): CirclePosition.TURN_LEFT_SOFT, # Gauche seul → doux à droite
+        (1, 1, 0): CirclePosition.TURN_LEFT_HARD, # Gauche + milieu → fort à droite
         (1, 1, 1): CirclePosition.INTERSECTION,    # Tous les trois → ambiguïté
         (0, 0, 0): CirclePosition.LOST_IN_CENTER,  # Aucun capteur → au centre
     }
