@@ -35,21 +35,22 @@ TURN_LEFT = False
 AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.5
 BYPASS_SPEED = SPEED_NORMAL_PCT
 
-def thread_ultrasonic(robot: Robot, interval: float) -> None:
-    """Lit le capteur ultrason en boucle et met à jour RobotState."""
+def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
+    """Lit le capteur ultrason en boucle en balayant de gauche à droite et met à jour la variable global scan."""
     log = logger.get_logger("US")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
     def scan_cm() -> list:
+        # scanning from left to right using the ultrasonic module
         HR_MOTOR = 1
         VR_MOTOR = 2
         data = []
-        start_position = int(HEAD_ANGLE_CENTER + (SCAN_ANGLE/2))
-        end_position = int(HEAD_ANGLE_CENTER - (SCAN_ANGLE/2))
-        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5)
-        robot.head.set_angle_motor(HR_MOTOR, start_position)
-        time.sleep(0.3)
-        for angle in range(start_position, end_position-1, -1):
+        start_position = int(HEAD_ANGLE_CENTER + (SCAN_ANGLE/2))  # left
+        end_position = int(HEAD_ANGLE_CENTER - (SCAN_ANGLE/2))    #right
+        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5) # looking forward vertically
+        robot.head.set_angle_motor(HR_MOTOR, start_position)      #setting at start position
+        time.sleep(0.2) # waiting head to be ready
+        for angle in range(start_position, end_position-1, -1): # scanning from left ro right
             robot.head.set_angle_motor(HR_MOTOR, angle)
             time.sleep(0.01)
             data.append(robot.ultrasonic.read_mm()/10)
@@ -61,13 +62,14 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
             if not robot.state.running:
                 break
 
-        scan = scan_cm()
+        scan = scan_cm() # scanning and putting the result in the global scan variable
 
-        # time.sleep(interval)
+        # time.sleep(interval) # no need of a time interval because there are already time.sleep statement in scan_cm
 
     log.info("Thread arrêté")
 
 def bypass_side(scan, min_dist):
+    """Determine if we should bypass by the left of the right, given a distance and a scan"""
     index = scan.index(min_dist)
     angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
     if angle <= HEAD_ANGLE_CENTER:
@@ -77,13 +79,15 @@ def bypass_side(scan, min_dist):
 
 
 def bypass(robot, bypass_direction, obj_angle):
-    if bypass_direction == TURN_RIGHT:
+    """Bypassing an object by the left or by the right"""
+    if bypass_direction == TURN_RIGHT: # good direction from indications
         turn = WHEEL_ANGLE_MIN
         counter_turn = WHEEL_ANGLE_MAX
     else:
         counter_turn = WHEEL_ANGLE_MAX
         turn = WHEEL_ANGLE_MIN
 
+    # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
     print("sleep time", sleep_time)
 
@@ -111,6 +115,7 @@ def bypass(robot, bypass_direction, obj_angle):
     robot.motor.stop()
 
 def get_absolute_angle(scan, dist):
+    """From a given distance in a scan we determine the absolute angle from the front of the robot"""
     idx = scan.index(dist)
     print("idx ", idx)
     if idx <= SCAN_ANGLE/2: #left
@@ -130,6 +135,10 @@ def thread_controller(robot: Robot, interval: float) -> None:
     global scan
     try:
         while True:
+            with robot.state.lock: # stopping the loop when program is stopped
+                if not robot.state.running:
+                    break
+
             # DRIVING AVOID OBJECTS LOGIC
             if scan:
                 actual_scan = scan
