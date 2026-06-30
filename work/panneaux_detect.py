@@ -40,27 +40,50 @@ def frame_to_hsv(frame, source):
     return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
 
-def classify_rainbow(hsv_image):
-    # OpenCV HSV: H in [0, 179], S/V in [0, 255]
-    color_ranges = {
-        "Rouge": [((0, 120, 70), (10, 255, 255)), ((170, 120, 70), (179, 255, 255))],
-        "Orange": [((11, 120, 70), (24, 255, 255))],
-        "Jaune": [((25, 120, 70), (35, 255, 255))],
-        "Vert": [((36, 80, 60), (85, 255, 255))],
-        "Bleu": [((86, 80, 60), (125, 255, 255))],
-        "Indigo": [((126, 60, 40), (145, 255, 255))],
-        "Violet": [((146, 60, 40), (169, 255, 255))],
-    }
+def classify_sign(hsv_image):
+    blue_ranges = [((86, 80, 60), (125, 255, 255))]
+    work_ranges = [
+        ((0, 120, 70), (10, 255, 255)),
+        ((170, 120, 70), (179, 255, 255)),
+        ((11, 120, 70), (24, 255, 255)),
+    ]
 
-    scores = {color: color_score(hsv_image, ranges) for color, ranges in color_ranges.items()}
-    best_color = max(scores, key=scores.get)
-    best_score = scores[best_color]
+    blue_score = color_score(hsv_image, blue_ranges)
+    work_score = color_score(hsv_image, work_ranges)
 
     min_score = max(500, int(hsv_image.shape[0] * hsv_image.shape[1] * 0.003))
-    if best_score < min_score:
-        return "Aucune couleur detectee"
+    if blue_score < min_score and work_score < min_score:
+        return "Aucun panneau detecte"
 
-    return best_color
+    if blue_score > work_score:
+        return "Tunnel"
+    if work_score > blue_score:
+        return "Travaux"
+    return "Aucun panneau detecte"
+
+
+# Ancienne version 7 couleurs conservée pour référence :
+# def classify_rainbow(hsv_image):
+#     # OpenCV HSV: H in [0, 179], S/V in [0, 255]
+#     color_ranges = {
+#         "Rouge": [((0, 120, 70), (10, 255, 255)), ((170, 120, 70), (179, 255, 255))],
+#         "Orange": [((11, 120, 70), (24, 255, 255))],
+#         "Jaune": [((25, 120, 70), (35, 255, 255))],
+#         "Vert": [((36, 80, 60), (85, 255, 255))],
+#         "Bleu": [((86, 80, 60), (125, 255, 255))],
+#         "Indigo": [((126, 60, 40), (145, 255, 255))],
+#         "Violet": [((146, 60, 40), (169, 255, 255))],
+#     }
+#
+#     scores = {color: color_score(hsv_image, ranges) for color, ranges in color_ranges.items()}
+#     best_color = max(scores, key=scores.get)
+#     best_score = scores[best_color]
+#
+#     min_score = max(500, int(hsv_image.shape[0] * hsv_image.shape[1] * 0.003))
+#     if best_score < min_score:
+#         return "Aucune couleur detectee"
+#
+#     return best_color
 
 
 def add_noise(frame, sigma=10):
@@ -121,7 +144,7 @@ if __name__ == "__main__":
                     break
 
                 hsv_frame = frame_to_hsv(frame, "rgb")
-                label = classify_rainbow(hsv_frame)
+                label = classify_sign(hsv_frame)
 
                 if label != label_prev:
                     print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {label}")
@@ -149,7 +172,7 @@ if __name__ == "__main__":
                     raise RuntimeError("Impossible de lire une image depuis la camera.")
 
                 hsv_frame = frame_to_hsv(frame, "bgr")
-                label = classify_rainbow(hsv_frame)
+                label = classify_sign(hsv_frame)
 
                 if label != label_prev:
                     print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {label}")
