@@ -122,7 +122,7 @@ class CircleTracker:
             LinePosition.INTERSECTION: "ambigu",
             LinePosition.LOST_IN_CENTER: "recherche",
         }
-        self._log.debug(
+        self._log.info(
             "Table vérité (G=%d M=%d D=%d) -> %s | direction=%s",
             left,
             middle,

@@ -156,7 +156,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
         left, middle, right = robot.line_tracker.read()
         left, middle, right = int(left), int(middle), int(right)
         current_action = robot.line_tracker.decode(left, middle, right)
-        log.debug(
+        log.info(
             "État capteurs (G=%d M=%d D=%d) -> %s | direction=%s",
             left,
             middle,
@@ -171,37 +171,37 @@ def thread_controller(robot: Robot, interval: float) -> None:
             # Approche depuis la droite -> tourner doucement à gauche
             robot.head.steer_left(15)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            log.debug("Capteur droit actif -> virage doux gauche")
+            log.info("Capteur droit actif -> virage doux gauche")
 
         elif right and middle:
             # Trop à droite -> tourner fort à gauche
             robot.head.steer_left(35)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            log.debug("Capteur droit+milieu actifs -> virage fort gauche")
+            log.info("Capteur droit+milieu actifs -> virage fort gauche")
 
         elif left and not middle:
             # Approche depuis la gauche -> tourner doucement à droite
             robot.head.steer_right(15)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            log.debug("Capteur gauche actif -> virage doux droite")
+            log.info("Capteur gauche actif -> virage doux droite")
 
         elif left and middle:
             # Trop à gauche -> tourner fort à droite
             robot.head.steer_right(35)
             robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-            log.debug("Capteur gauche+milieu actifs -> virage fort droite")
+            log.info("Capteur gauche+milieu actifs -> virage fort droite")
 
         elif middle and not (left or right):
             # Ligne centrée -> tout droit
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            log.debug("Capteur milieu actif -> tout droit")
+            log.info("Capteur milieu actif -> tout droit")
 
         else:
             # Aucun capteur -> avancer doucement ou chercher
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
-            log.debug("Aucun capteur actif -> avancer (centre)")
+            log.info("Aucun capteur actif -> avancer (centre)")
 
         time.sleep(interval)
 
