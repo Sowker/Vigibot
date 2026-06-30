@@ -12,10 +12,10 @@ from adafruit_pca9685 import PCA9685
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head, STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import DCMotor, Direction, SPEED_SLOW_PCT, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
+from t4_dc_motor import DCMotor, Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LinePosition, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
-# from t11_buzzer_Sirene import POLICE, MII, play, close_buzzer
+from t11_buzzer_Sirene import POLICE, MII, play, close_buzzer
 import logger
 
 # ── PCA9685 ────────────────────────────────────────────────────────
@@ -40,8 +40,12 @@ class RobotState:
     emergency_stop: bool = False   # True  → obstacle détecté
     driving:        bool = False   # True  → le robot avance
     maneuver:       bool = False   # True  → manœuvre de récupération (ligne perdue)
-    arrow_direction: int = 0       # -1 = gauche, 0 = inconnu, 1 = droite
-
+    lost_time:      float = None # -> is the time when we lost the line
+    post_time:      float = None # -> time for fine tuning post manuver
+    post_manuver:   bool = False   # TRUE -> do the post manuver tuning
+    shutdown:       bool = False   # TRUE -> kill the robot
+    already_lost:   bool = False   # True -> count until he is really lost
+    last_turn:      str  = 0       # -1 : Gauche, 0 : Tout droit, 1 : Droite
 
 
 # ═══════════════════════════════════════════════════════════════════

@@ -28,7 +28,7 @@ from t11_buzzer_Sirene import POLICE,MII, play, close_buzzer
 from t1_front_led import FrontLEDs
 from t2_back_led import Adeept_SPI_LedPixel
 from t3_servomotors import Head
-from t4_dc_motor import DCMotor, Direction, SPEED_NORMAL_PCT, SPEED_SLOW_PCT
+from t4_dc_motor import DCMotor, Direction, SPEED_NORMAL_PCT, SPEED_BACKWARD
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 
 # "2t8_light_following" commence par un chiffre -> import dynamique
@@ -48,7 +48,7 @@ LIGHT_CH_LEFT  = 0
 LIGHT_CH_RIGHT = 1
 
 PAUSE_AVANT_RECUL_S  = 1.0  # attente avant le recul (point 4)
-RECUL_DUREE_S        = 1.5  # ~30 cm a vitesse reduite (SPEED_SLOW_PCT)
+RECUL_DUREE_S        = 1.5  # ~30 cm a vitesse reduite (SPEED_BACKWARD)
 PAUSE_APRES_RECUL_S  = 2.0  # arret avant reprise du suivi (point 5)
 
 LOOP_PERIOD_S = 0.1
@@ -137,7 +137,7 @@ def handle_obstacle(robot: Robot, log: logging.Logger) -> None:
     time.sleep(PAUSE_AVANT_RECUL_S)
 
     log.info("Recul ~30 cm à vitesse réduite + Bip Bip (sirène)")
-    robot.motor.drive(Direction.BACKWARD, SPEED_SLOW_PCT, slow=True)
+    robot.motor.drive(Direction.BACKWARD, SPEED_BACKWARD, slow=True)
     time.sleep(RECUL_DUREE_S)
     robot.motor.stop()
 

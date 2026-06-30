@@ -47,10 +47,10 @@ class LineTracker:
 
     TRUTH_TABLE = {
         (0, 1, 0): LinePosition.STRAIGHT,
-        (1, 1, 0): LinePosition.TURN_LEFT_SOFT,
-        (0, 1, 1): LinePosition.TURN_RIGHT_SOFT,
-        (1, 0, 0): LinePosition.TURN_LEFT_HARD,
-        (0, 0, 1): LinePosition.TURN_RIGHT_HARD,
+        (1, 1, 0): LinePosition.TURN_RIGHT_SOFT,
+        (0, 1, 1): LinePosition.TURN_LEFT_SOFT,
+        (1, 0, 0): LinePosition.TURN_RIGHT_HARD,
+        (0, 0, 1): LinePosition.TURN_LEFT_HARD,
         (1, 1, 1): LinePosition.INTERSECTION,
         (0, 0, 0): LinePosition.LINE_LOST,
     }
