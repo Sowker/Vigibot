@@ -23,7 +23,7 @@ from t11_buzzer_Sirene import POLICE, MII, play
 LINE_LOST_SOUND = "MII"
 
 # ── Temporisations ─────────────────────────────────────────────────
-TIME_LOST = 0.8  # Temps d'attente/délai avant de réagir à la perte de ligne
+TIME_LOST = 1.75  # Temps d'attente/délai avant de réagir à la perte de ligne
 TIME_POST_MANUVER = 0.1  # Temps alloué pour se stabiliser après avoir retrouvé la ligne
 
 CTRL_INTERVAL_S = 0.05  # s — période du thread contrôleur (cerveau)
@@ -225,19 +225,18 @@ def basic_movement(robot: Robot, interval: float, log) -> None:
                 '''
 
                 # Si on allait tout droit, on continue tout droit en espérant la retrouver (traits discontinus)
-                if robot.state.last_turn == 0:
+                if robot.state.last_turn in [0, 1, -1]:
                     robot.head.steer_center()
                     robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
 
                 # Si on tournait à gauche, on continue pour detecter une ligne
-                elif robot.state.last_turn in [-1, -2]:
+                elif robot.state.last_turn in [2, -2]:
+                    with robot.state.lock:
+                        robot.state.maneuver = True
+                    '''
                     robot.head.steer_left(STEER_HARD_DEG)
                     robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
-
-                # Si on tournait à droite, on continue pour detecter une ligne
-                elif robot.state.last_turn in [1,2]:
-                    robot.head.steer_right(STEER_HARD_DEG)
-                    robot.motor.drive(Direction.FORWARD, SPEED_BACKWARD, fast_accel=True)
+                    '''
 
             else:
                 # the timer runs out, we go to the manuver state do decide what to do
