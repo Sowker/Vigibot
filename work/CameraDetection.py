@@ -78,8 +78,8 @@ def get_direction(picam : Picamera2):
 
         # ==== To Fine tune ====
         # Crop the image by 10% - on each side - to focus on the center
-        # frame = default_frame[round(h*0.1):round(h-h*0.11),round(w*0.1):round(w-w*0.1)]
-        frame = default_frame
+        frame = default_frame[round(h*0.1):round(h-h*0.11),round(w*0.1):round(w-w*0.1)]
+        # frame = default_frame
 
         # ==== To Fine tune ====
         # Detect the white (out-layer of the arrow) to crop the image to it.
@@ -185,20 +185,14 @@ def get_direction(picam : Picamera2):
                     return direction
 
 
-def adjust_position(picam : Picamera2):
-
-    # capture_array()
+def adjust_position(picam: Picamera2):
+    # Get height and width of the camera feed from an initial check
     prev_frame = picam.capture_array()
-
-    # Get height and width of the camera feed
     h, w = prev_frame.shape[:2]
 
-    # Define range for white color in HSV
-    # (Hue, Saturation, Value)
     lower_white = np.array([0, 0, 150])
     upper_white = np.array([179, 70, 255])
 
-    # Define range for black color in HSV
     lower_black = np.array([0, 0, 0])
     upper_black = np.array([255, 255, 50])
 
@@ -209,95 +203,64 @@ def adjust_position(picam : Picamera2):
             print(f"Failed to capture frame in loop: {e}")
             break
 
-        # Appy Gaussian Blur
-        default_frame = cv2.GaussianBlur(default_frame, (15, 15), 0)
+        # Apply Gaussian Blur
+        blurred_frame = cv2.GaussianBlur(default_frame, (15, 15), 0)
 
-        # ==== To Fine tune ====
-        # Crop the image by 10% - on each side - to focus on the center
-        # frame = default_frame[round(h*0.1):round(h-h*0.11),round(w*0.1):round(w-w*0.1)]
-        frame = default_frame
+        # Convert the full frame from BGR to HSV format
+        hsv = cv2.cvtColor(blurred_frame, cv2.COLOR_BGR2HSV)
 
-        # ==== To Fine tune ====
-        # Detect the white (out-layer of the arrow) to crop the image to it.
-        # So we can remove unnecessary noise
+        # Create a white mask to find the boundaries
+        white_mask = cv2.inRange(hsv, lower_white, upper_white)
 
-        # Convert the frame from RGB to HSV format
-        hsv = cv2.cvtColor(default_frame, cv2.COLOR_BGR2HSV)
+        # Create the matrix of white from applying the mask
+        has_white_x = np.any(white_mask, axis=0)
+        has_white_y = np.any(white_mask, axis=1)
 
-        # Create a white mask to focus on what is inside the white part
-        mask = cv2.inRange(hsv, lower_white, upper_white)
-
-        # Filter the white part
-        result = cv2.bitwise_and(frame, frame, mask=mask)
-
-        # Create the matrice of white from applying the mask
-        has_white_x = np.any(mask, axis=0)
-        has_white_y = np.any(mask, axis=1)
-
-        # Separate each axcis
+        # Separate each axis
         x_coords = np.where(has_white_x)[0]
         y_coords = np.where(has_white_y)[0]
 
-        x_min: int
-        y_min: int
-        x_max: int
-        y_max: int
-
-        # Verify that the matrice x and y hold white because we want to detect them
-        if not(x_coords.size > 0 and y_coords.size > 0):
+        # Verify that we actually detected white
+        if not (x_coords.size > 0 and y_coords.size > 0):
             print("No white detected on the image.")
-            # cv2.imshow('Raw image', default_frame)
+            continue
 
-        elif x_coords.size > 0 and y_coords.size > 0:
-            x_min, x_max = x_coords[0], x_coords[-1]
-            y_min, y_max = y_coords[0], y_coords[-1]
+        x_min, x_max = x_coords[0], x_coords[-1]
+        y_min, y_max = y_coords[0], y_coords[-1]
 
-            # print(f"White detected: x({x_min}-{x_max}), y({y_min}-{y_max})")
-            box_width = x_max - x_min
-            box_height = y_max - y_min
-            if box_width < 10 or box_height < 10:
-                print(f"Skipping tiny/invalid frame: x({x_min}-{x_max}), y({y_min}-{y_max})")
+        box_width = x_max - x_min
+        box_height = y_max - y_min
 
-            else :
+        if box_width < 10 or box_height < 10:
+            print(f"Skipping tiny/invalid frame: x({x_min}-{x_max}), y({y_min}-{y_max})")
+            continue
 
-                # Draw the rectangle box using the min/max coordinates
-                default = cv2.rectangle(default_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+        # Isolate the white bounding box area from our HSV image safely
+        cropped_hsv = hsv[y_min:y_max, x_min:x_max]
 
-                # Cut the frame to only have the white
-                frame = frame[y_min:y_max, x_min:x_max]
+        # Create mask for the black color inside this cropped space
+        black_mask = cv2.inRange(cropped_hsv, lower_black, upper_black)
 
-                # Convert the new cropped frame from RGB to HSV format
-                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        # Calculate the moments of the binary black mask
+        moments = cv2.moments(black_mask)
 
-                # Create mask for the black color
-                mask = cv2.inRange(hsv, lower_black, upper_black)
+        # Prevent division by zero
+        if moments["m00"] != 0:
+            # Calculate relative X and Y coordinates of the center (within the crop)
+            relative_cX = int(moments["m10"] / moments["m00"])
+            relative_cY = int(moments["m01"] / moments["m00"])
 
-                # Filter the black part
-                result = cv2.bitwise_and(frame, frame, mask=mask)
+            # Translate to ABSOLUTE coordinates (relative to the full screen) using the offsets
+            cX = x_min + relative_cX
+            cY = y_min + relative_cY
 
-                # Calculate the moments of the binary mask
-                moments = cv2.moments(mask)
+            # Screen absolute middle alignment logic
+            x_screen = w / 2
+            tolerance = 20
 
-                # Prevent division by zero
-                if moments["m00"] == 0:
-                    pass
-                elif moments["m00"] != 0:
-                    # Calculate X and Y coordinates of the center
-                    cX = int(moments["m10"] / moments["m00"])
-                    cY = int(moments["m01"] / moments["m00"])
-
-                    # The size of the screen : h, w
-                    # absolute middle
-                    x_screen = w / 2
-
-                    tolerance = 20
-
-                    if cX > (x_screen + tolerance):
-                        # The object's center is to the right of the screen center
-                        return "right"
-                    elif cX < (x_screen - tolerance):
-                        # The object's center is to the left of the screen center
-                        return "left"
-                    else:
-                        # The object is within the center deadzone
-                        return "straight"
+            if cX > (x_screen + tolerance):
+                return "right"
+            elif cX < (x_screen - tolerance):
+                return "left"
+            else:
+                return "straight"

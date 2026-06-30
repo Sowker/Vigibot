@@ -28,9 +28,10 @@ def L_turn(robot : Robot, direction : str) -> None:
 
         robot.head.steer_left(STEER_HARD_DEG)
         robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-        time.sleep(0.20)
+        time.sleep(0.18)
 
         robot.head.steer_center()
+        # robot.head.set_angle_motor(0, 90 - 10)
         robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
         time.sleep(0.15)
 
@@ -47,9 +48,10 @@ def L_turn(robot : Robot, direction : str) -> None:
 
         robot.head.steer_right(STEER_HARD_DEG)
         robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-        time.sleep(0.20)
+        time.sleep(0.18)
 
         robot.head.steer_center()
+        # robot.head.set_angle_motor(0, 90 - 10)
         robot.motor.drive(Direction.BACKWARD, SPEED_HIGH, fast_accel=True)
         time.sleep(0.15)
     else:
@@ -58,7 +60,8 @@ def L_turn(robot : Robot, direction : str) -> None:
 def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
     log = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
-    robot.head.set_angle_motor(0, 85)
+    # robot.head.set_angle_motor(0, 85)
+    robot.head.steer_center()
     while True:
         # ── 1. Lecture de l'état actuel ───────────────────────────
         with robot.state.lock:
@@ -68,11 +71,25 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
 
         # ── 2. Gestion de l'urgence (Priorité Absolue) ────────────
         if emergency:
-            robot.motor.stop()
-            robot.head.steer_center()
-            log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
-            direction = get_arrow_derection(camera)
-            L_turn(robot, direction)
+            correction = adjust_position(camera)
+            if correction != "straight":
+                if correction == "left":
+                    robot.head.set_angle_motor(0, 90 - STEER_SOFT_DEG)
+                elif correction == "right":
+                    robot.head.set_angle_motor(0, 90 + STEER_SOFT_DEG)
+                robot.motor.drive(Direction.BACKWARD, SPEED_TURNING_PCT, fast_accel=True)
+                time.sleep(0.5)
+                robot.head.steer_center()
+                #robot.head.set_angle_motor(0, 90 - 10)
+                robot.motor.drive(Direction.BACKWARD,SPEED_TURNING_PCT, fast_accel=True)
+                time.sleep(0.2)
+            else :
+                robot.motor.stop()
+                robot.head.steer_center()
+                # robot.head.set_angle_motor(0, 90 - 10)
+                log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
+                direction = get_arrow_derection(camera)
+                L_turn(robot, direction)
         else:
             #  ── 3. Adjust the position of the robot to be straigth ────────────
             corretion = adjust_position(camera)
@@ -84,7 +101,8 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
             else:
                 robot.head.set_angle_motor(1, 100)
-                robot.head.set_angle_motor(0, 85)
+                robot.head.steer_center()
+                # robot.head.set_angle_motor(0, 85)
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
 
 
