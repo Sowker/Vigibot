@@ -1,17 +1,22 @@
-import os
-from pathlib import Path
-
-# Running headless: force Qt to use offscreen platform to avoid X/Qt errors
-# Remove any existing setting then set to offscreen.
-os.environ.pop("QT_QPA_PLATFORM", None)
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-
 import cv2
 import numpy as np
 import time
 
-BLUE_LABEL = "Tunnel"
-YELLOW_LABEL = "Travaux"
+# Ancien mode bleu / jaune conservé pour référence :
+# BLUE_LABEL = "Tunnel"
+# YELLOW_LABEL = "Travaux"
+#
+# def classify_sign(mask_blue, mask_yellow):
+#     blue_score = cv2.countNonZero(mask_blue)
+#     yellow_score = cv2.countNonZero(mask_yellow)
+#
+#     if blue_score > yellow_score and blue_score > 500:
+#         print(f"{BLUE_LABEL} detecté")
+#         return f"{BLUE_LABEL} detecte"
+#     if yellow_score > blue_score and yellow_score > 500:
+#         print(f"{YELLOW_LABEL} detecté")
+#         return f"{YELLOW_LABEL} detecte"
+#     return "Aucun panneau detecte"
 
 
 def apply_mask(hsv_image, lower_bound, upper_bound):
@@ -22,17 +27,40 @@ def apply_mask(hsv_image, lower_bound, upper_bound):
     return mask
 
 
-def classify_sign(mask_blue, mask_yellow):
-    blue_score = cv2.countNonZero(mask_blue)
-    yellow_score = cv2.countNonZero(mask_yellow)
+def color_score(hsv_image, ranges):
+    score = 0
+    for lower_bound, upper_bound in ranges:
+        score += cv2.countNonZero(apply_mask(hsv_image, lower_bound, upper_bound))
+    return score
 
-    if blue_score > yellow_score and blue_score > 500:
-        print(f"{BLUE_LABEL} detecté")
-        return f"{BLUE_LABEL} detecte"
-    if yellow_score > blue_score and yellow_score > 500:
-        print(f"{YELLOW_LABEL} detecté")
-        return f"{YELLOW_LABEL} detecte"
-    return "Aucun panneau detecte"
+
+def frame_to_hsv(frame, source):
+    if source == "rgb":
+        return cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+    return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+
+def classify_rainbow(hsv_image):
+    # OpenCV HSV: H in [0, 179], S/V in [0, 255]
+    color_ranges = {
+        "Rouge": [((0, 120, 70), (10, 255, 255)), ((170, 120, 70), (179, 255, 255))],
+        "Orange": [((11, 120, 70), (24, 255, 255))],
+        "Jaune": [((25, 120, 70), (35, 255, 255))],
+        "Vert": [((36, 80, 60), (85, 255, 255))],
+        "Bleu": [((86, 80, 60), (125, 255, 255))],
+        "Indigo": [((126, 60, 40), (145, 255, 255))],
+        "Violet": [((146, 60, 40), (169, 255, 255))],
+    }
+
+    scores = {color: color_score(hsv_image, ranges) for color, ranges in color_ranges.items()}
+    best_color = max(scores, key=scores.get)
+    best_score = scores[best_color]
+
+    min_score = max(500, int(hsv_image.shape[0] * hsv_image.shape[1] * 0.003))
+    if best_score < min_score:
+        return "Aucune couleur detectee"
+
+    return best_color
 
 
 def add_noise(frame, sigma=10):
@@ -44,18 +72,11 @@ def add_noise(frame, sigma=10):
 if __name__ == "__main__":
     import argparse
 
-    # Paramètres de couleur
-    lower_blue = (90, 80, 40)
-    upper_blue = (140, 255, 255)
-    lower_yellow = (15, 80, 80)
-    upper_yellow = (40, 255, 255)
-
-    parser = argparse.ArgumentParser(description="Détection de panneaux (bleu / jaune)")
-    parser.add_argument("--headless", action="store_true", help="Mode sans GUI — imprime les labels dans le terminal")
+    parser = argparse.ArgumentParser(description="Détection de couleurs de l'arc-en-ciel")
+    parser.add_argument("--headless", action="store_true", help="Mode terminal uniquement")
     parser.add_argument("--power-pin", type=int, default=17, help="GPIO BCM pin pour alimenter la caméra (gpiozero OutputDevice)")
     args = parser.parse_args()
 
-    headless = args.headless
     POWER_PIN = args.power_pin
 
     cam_power = None
@@ -99,36 +120,21 @@ if __name__ == "__main__":
                     print(f"Failed to capture frame: {e}")
                     break
 
-                # Picamera2 retourne un tableau en RGB
-                hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                hsv_frame = frame_to_hsv(frame, "rgb")
+                label = classify_rainbow(hsv_frame)
 
-                mask_blue = apply_mask(hsv_frame, lower_blue, upper_blue)
-                mask_yellow = apply_mask(hsv_frame, lower_yellow, upper_yellow)
+                if label != label_prev:
+                    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {label}")
+                    label_prev = label
 
-                label = classify_sign(mask_blue, mask_yellow)
-
-                if headless:
-                    if label != label_prev:
-                        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {label}")
-                        label_prev = label
-                else:
-                    display_frame = frame.copy()
-                    cv2.putText(
-                        display_frame,
-                        label,
-                        (20, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 255, 0),
-                        2,
-                        cv2.LINE_AA,
-                    )
-                    # OpenCV expects BGR for display; convert if needed
-                    display_bgr = cv2.cvtColor(display_frame, cv2.COLOR_RGB2BGR)
-                    cv2.imshow("Panneaux", display_bgr)
-                    key = cv2.waitKey(1) & 0xFF
-                    if key in (27, ord("q")):
-                        break
+                # Ancien affichage OpenCV conservé en commentaire :
+                # display_frame = frame.copy()
+                # cv2.putText(display_frame, label, (20, 40), ...)
+                # display_bgr = cv2.cvtColor(display_frame, cv2.COLOR_RGB2BGR)
+                # cv2.imshow("Panneaux", display_bgr)
+                # key = cv2.waitKey(1) & 0xFF
+                # if key in (27, ord("q")):
+                #     break
 
         else:
             # Fallback vers webcam OpenCV (PC ou USB webcam)
@@ -142,33 +148,20 @@ if __name__ == "__main__":
                 if not success:
                     raise RuntimeError("Impossible de lire une image depuis la camera.")
 
-                hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                hsv_frame = frame_to_hsv(frame, "bgr")
+                label = classify_rainbow(hsv_frame)
 
-                mask_blue = apply_mask(hsv_frame, lower_blue, upper_blue)
-                mask_yellow = apply_mask(hsv_frame, lower_yellow, upper_yellow)
+                if label != label_prev:
+                    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {label}")
+                    label_prev = label
 
-                label = classify_sign(mask_blue, mask_yellow)
-
-                if headless:
-                    if label != label_prev:
-                        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {label}")
-                        label_prev = label
-                else:
-                    display_frame = frame.copy()
-                    cv2.putText(
-                        display_frame,
-                        label,
-                        (20, 40),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0,
-                        (0, 255, 0),
-                        2,
-                        cv2.LINE_AA,
-                    )
-                    cv2.imshow("Panneaux", display_frame)
-                    key = cv2.waitKey(1) & 0xFF
-                    if key in (27, ord("q")):
-                        break
+                # Ancien affichage OpenCV conservé en commentaire :
+                # display_frame = frame.copy()
+                # cv2.putText(display_frame, label, (20, 40), ...)
+                # cv2.imshow("Panneaux", display_frame)
+                # key = cv2.waitKey(1) & 0xFF
+                # if key in (27, ord("q")):
+                #     break
 
     except KeyboardInterrupt:
         print("Arrêt demandé — nettoyage...")
@@ -188,5 +181,3 @@ if __name__ == "__main__":
                 cam_power.off()
         except Exception:
             pass
-        if not headless:
-            cv2.destroyAllWindows()
