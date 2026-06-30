@@ -17,10 +17,10 @@ import logger as log
 class LinePosition(IntEnum):
     """Actions déduites des capteurs pour rester dans le cercle."""
     STRAIGHT = 0  # Ligne au milieu → tout droit
-    TURN_LEFT_SOFT = 1  # Ligne à droite → tourner doux à gauche
-    TURN_LEFT_HARD = 2  # Ligne à droite + milieu → tourner fort à gauche
-    TURN_RIGHT_SOFT = 3  # Ligne à gauche → tourner doux à droite
-    TURN_RIGHT_HARD = 4  # Ligne à gauche + milieu → tourner fort à droite
+    TURN_LEFT_SOFT = 1  # Ligne à gauche → tourner doux à gauche
+    TURN_LEFT_HARD = 2  # Ligne à gauche + milieu → tourner fort à gauche
+    TURN_RIGHT_SOFT = 3  # Ligne à droite → tourner doux à droite
+    TURN_RIGHT_HARD = 4  # Ligne à droite + milieu → tourner fort à droite
     INTERSECTION = 5  # Toutes les lignes → ambiguïté
     LOST_IN_CENTER = 6  # Aucune ligne → perdu au centre du cercle
 
@@ -65,10 +65,10 @@ class CircleTracker:
 
     TRUTH_TABLE = {
         (0, 1, 0): LinePosition.STRAIGHT,  # Milieu seul → tout droit
-        (0, 0, 1): LinePosition.TURN_LEFT_SOFT,  # Droit seul → doux à gauche
-        (0, 1, 1): LinePosition.TURN_LEFT_HARD,  # Droit + milieu → fort à gauche
-        (1, 0, 0): LinePosition.TURN_RIGHT_SOFT,  # Gauche seul → doux à droite
-        (1, 1, 0): LinePosition.TURN_RIGHT_HARD,  # Gauche + milieu → fort à droite
+        (0, 0, 1): LinePosition.TURN_RIGHT_SOFT,  # Droit seul → doux à droite
+        (0, 1, 1): LinePosition.TURN_RIGHT_HARD,  # Droit + milieu → fort à droite
+        (1, 0, 0): LinePosition.TURN_LEFT_SOFT,  # Gauche seul → doux à gauche
+        (1, 1, 0): LinePosition.TURN_LEFT_HARD,  # Gauche + milieu → fort à gauche
         (1, 1, 1): LinePosition.INTERSECTION,  # Tous les trois → ambiguïté
         (0, 0, 0): LinePosition.LOST_IN_CENTER,  # Aucun capteur → au centre
     }
