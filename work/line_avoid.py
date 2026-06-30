@@ -37,6 +37,19 @@ class LinePosition(IntEnum):
         }
         return translations[self]
 
+    @property
+    def direction(self) -> str:
+        directions = {
+            LinePosition.STRAIGHT: "tout droit",
+            LinePosition.TURN_LEFT_SOFT: "à gauche (léger)",
+            LinePosition.TURN_LEFT_HARD: "à gauche (fort)",
+            LinePosition.TURN_RIGHT_SOFT: "à droite (léger)",
+            LinePosition.TURN_RIGHT_HARD: "à droite (fort)",
+            LinePosition.INTERSECTION: "ambigu",
+            LinePosition.LOST_IN_CENTER: "recherche",
+        }
+        return directions[self]
+
 
 # ── Constantes ─────────────────────────────────────────────────
 
@@ -54,11 +67,11 @@ class CircleTracker:
     Barrette de 3 capteurs infrarouges optimisée pour rester dans un cercle.
 
     Logique :
-    - Capteur DROIT seul → Tourner DOUX à gauche (ligne à droite)
-    - Capteur DROIT + MILIEU → Tourner FORT à gauche (trop à droite)
+    - Capteur DROIT seul → Tourner DOUX à droite (ligne à droite)
+    - Capteur DROIT + MILIEU → Tourner FORT à droite (trop à droite)
     - Capteur MILIEU seul → Tout droit (ligne bien centrée)
-    - Capteur GAUCHE seul → Tourner DOUX à droite (ligne à gauche)
-    - Capteur GAUCHE + MILIEU → Tourner FORT à droite (trop à gauche)
+    - Capteur GAUCHE seul → Tourner DOUX à gauche (ligne à gauche)
+    - Capteur GAUCHE + MILIEU → Tourner FORT à gauche (trop à gauche)
     - Tous les capteurs → Ambiguïté
     - Aucun capteur → Perdu au centre du cercle
     """
@@ -96,11 +109,19 @@ class CircleTracker:
         left, middle, right = self.read()
         return self.decode(left, middle, right)
 
-    @staticmethod
-    def decode(left: int, middle: int, right: int) -> LinePosition:
+    def decode(self, left: int, middle: int, right: int) -> LinePosition:
         """Traduit les 3 valeurs binaires en une action adaptée au cercle."""
         pattern = (left, middle, right)
-        return CircleTracker.TRUTH_TABLE.get(pattern, LinePosition.LOST_IN_CENTER)
+        action = CircleTracker.TRUTH_TABLE.get(pattern, LinePosition.LOST_IN_CENTER)
+        self._log.debug(
+            "Table vérité (G=%d M=%d D=%d) -> %s | direction=%s",
+            left,
+            middle,
+            right,
+            action.name,
+            action.direction,
+        )
+        return action
 
 
 def parse_arguments() -> argparse.Namespace:

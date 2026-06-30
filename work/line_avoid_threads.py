@@ -142,6 +142,15 @@ def thread_controller(robot: Robot, interval: float) -> None:
         # Lire les capteurs bruts (gauche, milieu, droit)
         left, middle, right = robot.line_tracker.read()
         left, middle, right = int(left), int(middle), int(right)
+        current_action = robot.line_tracker.decode(left, middle, right)
+        log.debug(
+            "État capteurs (G=%d M=%d D=%d) -> %s | direction=%s",
+            left,
+            middle,
+            right,
+            current_action.name,
+            current_action.direction,
+        )
 
         # Comportement d'EVITEMENT (s'inspire de t7 mais inversé)
         # Priorité : détection droite -> tourner à gauche; détection gauche -> tourner à droite
