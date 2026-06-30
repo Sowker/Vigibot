@@ -6,7 +6,14 @@ from t11_robot import Robot
 import logger
 
 from t3_servomotors import STEER_HARD_DEG, STEER_SOFT_DEG
-from t4_dc_motor import Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, SPEED_NORMAL_PCT, SPEED_ADJUSTING_PCT, SPEED_HIGH
+from t4_dc_motor import Direction
+
+SPEED_NORMAL_PCT      = 30   # % puissance — ligne droite
+SPEED_TURNING_PCT     = 20   # % puissance — virage doux
+SPEED_ADJUSTING_PCT   = 40
+SPEED_BACKWARD        = 30   # % puissance — utilisé généralement pour aller en arrière
+SPEED_HIGH = 40
+
 
 from CameraDetection import get_direction, init_camera, shutdown, adjust_position
 
