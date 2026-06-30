@@ -256,7 +256,7 @@ def adjust_position(picam: Picamera2):
 
             # Screen absolute middle alignment logic
             x_screen = w / 2
-            tolerance = 20
+            tolerance = 30
 
             if cX > (x_screen + tolerance):
                 return "right"
