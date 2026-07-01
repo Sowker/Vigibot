@@ -27,13 +27,13 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 scan = []
 
 SCAN_ANGLE = 80
-SCAN_DIST_ACTION = 15 # in cm !!!
+SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
 
 AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.35
-BYPASS_SPEED = AVOID_OBJ_SPEED
+BYPASS_SPEED = SPEED_NORMAL_PCT * 0.8
 
 SCAN_STEP = 5
 
@@ -55,7 +55,7 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
         data_str = ""
         for angle in range(start_position, end_position+1, SCAN_STEP): # scanning from left ro right
             robot.head.set_angle_motor(HR_MOTOR, angle)
-            time.sleep(0.2)
+            time.sleep(0.07)
             distance_cm = robot.ultrasonic.read_mm()/10
             data.append(distance_cm)
             data_str = str(round(distance_cm)) + " " + data_str
@@ -98,7 +98,11 @@ def bypass(robot, bypass_direction, obj_angle):
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
     # print("sleep time", sleep_time)
-    sleep_time = 3
+    sleep_time = 2
+
+    # backward a bit first
+    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    robot.head.set_angle_motor(0, HEAD_ANGLE_CENTER)
 
     # turn
     robot.head.set_angle_motor(0, turn)
