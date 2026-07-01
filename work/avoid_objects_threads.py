@@ -117,7 +117,7 @@ def bypass(robot, bypass_direction, obj_idx, distance_cm):
     # backward a bit first
     robot.motor.drive(Direction.BACKWARD, BYPASS_SPEED)
     robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-
+    print("1/ratio_angle",str(1/ratio_angle))
     backward_sleep_time = (1/ratio_angle + 2/ratio_distance)/6 # between 0 and 3 seconds, inversly proportional to the distance and to the angle
     time.sleep(backward_sleep_time)
     print("backward_sleep_time ", backward_sleep_time)
