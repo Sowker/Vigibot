@@ -71,11 +71,11 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
 def bypass_side(scan, min_dist):
     """Determine if we should bypass by the left of the right, given a distance and a scan"""
     index = scan.index(min_dist)
-    angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
+    angle = HEAD_ANGLE_CENTER + (SCAN_ANGLE / 2) - index
     if angle <= HEAD_ANGLE_CENTER:
-        return TURN_LEFT
-    else:
         return TURN_RIGHT
+    else:
+        return TURN_LEFT
 
 
 def bypass(robot, bypass_direction, obj_angle):
@@ -112,7 +112,9 @@ def bypass(robot, bypass_direction, obj_angle):
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
     time.sleep(sleep_time)
 
+    # reset T pose
     robot.motor.stop()
+    robot.head.set_angle_motor(0, HEAD_ANGLE_CENTER)
 
 def get_absolute_angle(scan, dist):
     """From a given distance in a scan we determine the absolute angle from the front of the robot"""
