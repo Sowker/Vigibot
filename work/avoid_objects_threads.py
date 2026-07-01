@@ -26,7 +26,7 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
 scan = []
 
-SCAN_ANGLE = 70
+SCAN_ANGLE = 65
 SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
@@ -182,12 +182,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
                         print("turn right")
                         robot.motor.stop()
                         # input("next action")
-                        # bypass(robot, TURN_RIGHT, object_angle, min_dist)
+                        bypass(robot, TURN_RIGHT, object_angle, min_dist)
                     else:
                         print("turn left")
                         robot.motor.stop()
                         # input("next action")
-                        # bypass(robot, TURN_LEFT, object_angle, min_dist)
+                        bypass(robot, TURN_LEFT, object_angle, min_dist)
                 elif not driving:
                     print("drive")
                     robot.motor.stop()
