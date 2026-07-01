@@ -4,7 +4,7 @@ from t11_robot import Robot
 import logger
 
 
-from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
+from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, WHEEL_ANGLE_CENTER, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
 from t4_dc_motor import Direction, SPEED_NORMAL_PCT
 
 # Constantes
@@ -102,12 +102,12 @@ def bypass(robot, bypass_direction, obj_angle):
 
     # backward a bit first
     robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
-    robot.head.set_angle_motor(0, HEAD_ANGLE_CENTER)
-    time.sleep(sleep_time/5)
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
+    time.sleep(sleep_time/5) # TODO ajuster selon la distance avec l'obstacle
 
     # turn
     robot.head.set_angle_motor(0, turn)
-    time.sleep(0.5)
+    time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
     time.sleep(sleep_time)
 
@@ -115,20 +115,20 @@ def bypass(robot, bypass_direction, obj_angle):
 
     # counter_turn
     robot.head.set_angle_motor(0, counter_turn)
-    time.sleep(0.5)
+    time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
     time.sleep(2*sleep_time)
     robot.motor.stop()
 
     # realign
     robot.head.set_angle_motor(0, turn)
-    time.sleep(0.5)
+    time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(sleep_time)
+    time.sleep(sleep_time*0.5)
 
     # reset T pose
     robot.motor.stop()
-    robot.head.set_angle_motor(0, HEAD_ANGLE_CENTER)
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
 
 # def get_absolute_angle(scan, idx):
 #     """From a given distance in a scan we determine the absolute angle from the front of the robot"""
@@ -187,6 +187,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     robot.motor.stop()
                     # input("next action")
                     driving = True
+                    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
                     robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
             else:
                 print("no data yet")
