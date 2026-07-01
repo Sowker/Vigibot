@@ -31,7 +31,7 @@ SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
-turning_angle = 20
+turning_angle = 30
 BYPASS_RIGHT_ANGLE = WHEEL_ANGLE_CENTER - turning_angle
 BYPASS_LEFT_ANGLE = WHEEL_ANGLE_CENTER + turning_angle
 
@@ -106,9 +106,9 @@ def bypass(robot, bypass_direction, obj_angle, distance_cm):
     sleep_time = 3
 
     # backward a bit first
-    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    robot.motor.drive(Direction.BACKWARD, AVOID_OBJ_SPEED)
     robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-    time.sleep(2 * (1 / (distance_cm/10) ) ) # TODO ajuster selon la distance avec l'obstacle
+    time.sleep(3 * (1 / (distance_cm/10) ) ) # TODO ajuster selon la distance avec l'obstacle
 
     # turn
     robot.head.set_angle_motor(0, turn)
@@ -122,14 +122,14 @@ def bypass(robot, bypass_direction, obj_angle, distance_cm):
     robot.head.set_angle_motor(0, counter_turn)
     time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(2.5*sleep_time)
+    time.sleep(2*sleep_time)
     robot.motor.stop()
 
     # realign
     robot.head.set_angle_motor(0, turn)
     time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(sleep_time*0.5)
+    time.sleep(sleep_time)
 
     # reset T pose
     robot.motor.stop()
