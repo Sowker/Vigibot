@@ -150,12 +150,15 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     print("object angle ", object_angle)
                     if bypass_side(actual_scan, min_dist) == TURN_RIGHT:
                         print("turn right")
+                        input("next action")
                         bypass(robot, TURN_RIGHT, object_angle)
                     else:
                         print("turn left")
+                        input("next action")
                         bypass(robot, TURN_LEFT, object_angle)
                 else:
                     print("drive")
+                    input("next action")
                     robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
             else:
                 print("no data yet")
