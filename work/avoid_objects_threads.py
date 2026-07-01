@@ -55,10 +55,10 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
         data_str = ""
         for angle in range(start_position, end_position+1, SCAN_STEP): # scanning from left ro right
             robot.head.set_angle_motor(HR_MOTOR, angle)
-            time.sleep(0.1)
+            time.sleep(0.2)
             distance_cm = robot.ultrasonic.read_mm()/10
             data.append(distance_cm)
-            data_str = str(distance_cm) + " " + data_str
+            data_str = str(round(distance_cm)) + " " + data_str
         print(data_str)
         print()
         robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
