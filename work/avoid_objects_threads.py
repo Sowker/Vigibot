@@ -122,7 +122,7 @@ def bypass(robot, bypass_direction, obj_angle, distance_cm):
     robot.head.set_angle_motor(0, counter_turn)
     time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(1.5 * sleep_time)
+    time.sleep(2 * sleep_time)
     robot.motor.stop()
 
     # realign
