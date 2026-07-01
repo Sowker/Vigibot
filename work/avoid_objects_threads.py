@@ -32,7 +32,7 @@ SCAN_DIST_ACTION = 15 # in cm !!!
 TURN_RIGHT = True
 TURN_LEFT = False
 
-AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.4
+AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.35
 BYPASS_SPEED = AVOID_OBJ_SPEED
 
 SCAN_STEP = 5
@@ -150,39 +150,41 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     break
 
             # DRIVING AVOID OBJECTS LOGIC
-            # if scan:
-            #     actual_scan = scan
-            #     for e in actual_scan:
-            #         print(round(e), end=" ")
-            #     print()
-            #     print()
-            #     min_dist = min(actual_scan)
-            #     if min_dist <= SCAN_DIST_ACTION:
-            #         robot.motor.stop()
-            #         driving = False
-            #         print("min_dist", min_dist)
-            #         min_dist_idx = scan.index(min_dist)
-            #         print(min_dist_idx)
-            #         object_angle = 0  # = get_absolute_angle(actual_scan, min_dist_idx)
-            #         # print("object angle ", object_angle)
-            #         if bypass_side(min_dist_idx) == TURN_RIGHT:
-            #             print("turn right")
-            #             robot.motor.stop()
-            #             input("next action")
-            #             bypass(robot, TURN_RIGHT, object_angle)
-            #         else:
-            #             print("turn left")
-            #             robot.motor.stop()
-            #             input("next action")
-            #             bypass(robot, TURN_LEFT, object_angle)
-            #     elif not driving:
-            #         print("drive")
-            #         robot.motor.stop()
-            #         input("next action")
-            #         driving = True
-            #         robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
-            # else:
-            #     print("no data yet")
+            if scan:
+                actual_scan = scan
+                min_dist = min(actual_scan)
+                if min_dist <= SCAN_DIST_ACTION:
+                    # doing a second scan when we are stopped
+                    robot.motor.stop()
+                    time.sleep(0.1)
+                    actual_scan = scan
+                    min_dist = min(actual_scan)
+                    driving = False
+
+                    print("min_dist", min_dist)
+                    min_dist_idx = scan.index(min_dist)
+                    print("min_dist_idx", min_dist_idx)
+                    object_angle = 0  # = get_absolute_angle(actual_scan, min_dist_idx)
+                    # print("object angle ", object_angle)
+
+                    if bypass_side(min_dist_idx) == TURN_RIGHT:
+                        print("turn right")
+                        robot.motor.stop()
+                        input("next action")
+                        bypass(robot, TURN_RIGHT, object_angle)
+                    else:
+                        print("turn left")
+                        robot.motor.stop()
+                        input("next action")
+                        bypass(robot, TURN_LEFT, object_angle)
+                elif not driving:
+                    print("drive")
+                    robot.motor.stop()
+                    input("next action")
+                    driving = True
+                    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+            else:
+                print("no data yet")
 
             time.sleep(interval)
     except KeyboardInterrupt:
