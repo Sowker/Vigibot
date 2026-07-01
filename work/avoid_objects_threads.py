@@ -144,7 +144,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
             # DRIVING AVOID OBJECTS LOGIC
             if scan:
                 actual_scan = scan
-                for e in scan:
+                for e in actual_scan:
                     print(round(e), end="")
                 print()
             #     min_dist = min(actual_scan)
