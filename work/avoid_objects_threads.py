@@ -26,8 +26,8 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
 scan = []
 
-SCAN_ANGLE = 60
-SCAN_DIST_ACTION = 20 # in cm !!!
+SCAN_ANGLE = 80
+SCAN_DIST_ACTION = 15 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
@@ -36,7 +36,7 @@ AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.4
 BYPASS_SPEED = AVOID_OBJ_SPEED
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
-    """Lit le capteur ultrason en boucle en balayant de gauche à droite et met à jour la variable global scan."""
+    """Lit le capteur ultrason en boucle en balayant de droite à gauche et met à jour la variable global scan."""
     log = logger.get_logger("US")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
@@ -45,15 +45,20 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
         HR_MOTOR = 1
         VR_MOTOR = 2
         data = []
-        start_position = int(HEAD_ANGLE_CENTER + (SCAN_ANGLE/2))  # left
-        end_position = int(HEAD_ANGLE_CENTER - (SCAN_ANGLE/2))    #right
-        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER+5) # looking forward vertically
+        start_position = int(HEAD_ANGLE_CENTER - (SCAN_ANGLE/2))  # right
+        end_position = int(HEAD_ANGLE_CENTER + (SCAN_ANGLE/2))    # left
+        robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER + 5) # looking forward vertically
         robot.head.set_angle_motor(HR_MOTOR, start_position)      #setting at start position
-        time.sleep(0.2) # waiting head to be ready
-        for angle in range(start_position, end_position-1, -1): # scanning from left ro right
+        time.sleep(0.3) # waiting head to be ready
+        data_str = ""
+        for angle in range(start_position, end_position+1): # scanning from left ro right
             robot.head.set_angle_motor(HR_MOTOR, angle)
             time.sleep(0.01)
-            data.append(robot.ultrasonic.read_mm()/10)
+            distance_cm = robot.ultrasonic.read_mm()/10
+            data.append(distance_cm)
+            data_str = str(distance_cm) + " " + data_str
+        print(data_str)
+        print()
         robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
         return data
 
@@ -68,9 +73,10 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
 
     log.info("Thread arrêté")
 
+
 def bypass_side(index):
-    """Determine if we should bypass by the left of the right, given a distance and a scan"""
-    angle = HEAD_ANGLE_CENTER + (SCAN_ANGLE / 2) - index
+    """Determine if we should bypass by the left of the right, given an index"""
+    angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
     if angle <= HEAD_ANGLE_CENTER: # if object on the right
         return TURN_LEFT
     else: # object on the left
@@ -142,11 +148,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     break
 
             # DRIVING AVOID OBJECTS LOGIC
-            if scan:
-                actual_scan = scan
-                for e in actual_scan:
-                    print(round(e), end="")
-                print()
+            # if scan:
+            #     actual_scan = scan
+            #     for e in actual_scan:
+            #         print(round(e), end=" ")
+            #     print()
+            #     print()
             #     min_dist = min(actual_scan)
             #     if min_dist <= SCAN_DIST_ACTION:
             #         robot.motor.stop()
