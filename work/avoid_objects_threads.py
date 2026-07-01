@@ -39,7 +39,7 @@ BYPASS_LEFT_ANGLE = WHEEL_ANGLE_CENTER + turning_angle
 AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.35
 BYPASS_SPEED = SPEED_NORMAL_PCT * 0.8
 
-SCAN_STEP = 5
+SCAN_STEP = 10
 SCAN_WAIT_TIME = 0.07
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
