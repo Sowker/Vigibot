@@ -36,6 +36,7 @@ AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.35
 BYPASS_SPEED = SPEED_NORMAL_PCT * 0.8
 
 SCAN_STEP = 5
+SCAN_WAIT_TIME = 0.07
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle en balayant de droite à gauche et met à jour la variable global scan."""
@@ -51,11 +52,11 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
         end_position = int(HEAD_ANGLE_CENTER + (SCAN_ANGLE/2))    # left
         robot.head.set_angle_motor(VR_MOTOR, HEAD_ANGLE_CENTER + 5) # looking forward vertically
         robot.head.set_angle_motor(HR_MOTOR, start_position)      #setting at start position
-        time.sleep(0.3) # waiting head to be ready
+        time.sleep(0.2) # waiting head to be ready
         data_str = ""
         for angle in range(start_position, end_position+1, SCAN_STEP): # scanning from left ro right
             robot.head.set_angle_motor(HR_MOTOR, angle)
-            time.sleep(0.07)
+            time.sleep(SCAN_WAIT_TIME)
             distance_cm = robot.ultrasonic.read_mm()/10
             data.append(distance_cm)
             data_str = str(round(distance_cm)) + " " + data_str
@@ -161,7 +162,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 if min_dist <= SCAN_DIST_ACTION:
                     # doing a second scan when we are stopped
                     robot.motor.stop()
-                    time.sleep(0.1)
+                    time.sleep(SCAN_ANGLE/SCAN_STEP * SCAN_WAIT_TIME +0.3)
                     actual_scan = scan
                     min_dist = min(actual_scan)
                     driving = False
