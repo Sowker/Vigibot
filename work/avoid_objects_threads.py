@@ -115,7 +115,7 @@ def bypass(robot, bypass_direction, obj_idx, distance_cm):
     #print("ratio_angle ", str(obj_angle),"/", str(SCAN_ANGLE/2),"=", ratio_angle, " ratio_distance = ",str(distance_cm),"/",str(SCAN_DIST_ACTION), ratio_distance)
 
     # backward a bit first
-    robot.motor.drive(Direction.BACKWARD, BYPASS_SPEED)
+    robot.motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT * 0.5)
     robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
     print("1/ratio_angle ",str(1/ratio_angle))
     print("2/ratio_distance ",str(2/ratio_distance))
