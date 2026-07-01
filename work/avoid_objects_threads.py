@@ -98,12 +98,12 @@ def bypass(robot, bypass_direction, obj_angle):
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
     # print("sleep time", sleep_time)
-    sleep_time = 1.7
+    sleep_time = 1.8
 
-    # backward a bit first
-    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-    time.sleep(sleep_time/5) # TODO ajuster selon la distance avec l'obstacle
+    # # backward a bit first
+    # robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    # robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
+    # time.sleep(sleep_time/5) # TODO ajuster selon la distance avec l'obstacle
 
     # turn
     robot.head.set_angle_motor(0, turn)
