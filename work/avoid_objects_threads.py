@@ -165,26 +165,26 @@ def thread_controller(robot: Robot, interval: float) -> None:
                     min_dist = min(actual_scan)
                     driving = False
 
-                    print("min_dist", min_dist)
+                    # print("min_dist", min_dist)
                     min_dist_idx = scan.index(min_dist)
-                    print("min_dist_idx", min_dist_idx)
+                    # print("min_dist_idx", min_dist_idx)
                     object_angle = 0  # = get_absolute_angle(actual_scan, min_dist_idx)
                     # print("object angle ", object_angle)
 
                     if bypass_side(min_dist_idx) == TURN_RIGHT:
                         print("turn right")
                         robot.motor.stop()
-                        input("next action")
+                        # input("next action")
                         bypass(robot, TURN_RIGHT, object_angle)
                     else:
                         print("turn left")
                         robot.motor.stop()
-                        input("next action")
+                        # input("next action")
                         bypass(robot, TURN_LEFT, object_angle)
                 elif not driving:
                     print("drive")
                     robot.motor.stop()
-                    input("next action")
+                    # input("next action")
                     driving = True
                     robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
             else:
