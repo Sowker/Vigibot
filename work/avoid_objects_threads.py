@@ -32,7 +32,7 @@ SCAN_DIST_ACTION = 20 # in cm !!!
 TURN_RIGHT = True
 TURN_LEFT = False
 
-AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.2
+AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.3
 BYPASS_SPEED = AVOID_OBJ_SPEED
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
