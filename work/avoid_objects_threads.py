@@ -84,8 +84,9 @@ def bypass(robot, bypass_direction, obj_angle):
         turn = WHEEL_ANGLE_MIN
         counter_turn = WHEEL_ANGLE_MAX
     else:
-        counter_turn = WHEEL_ANGLE_MAX
-        turn = WHEEL_ANGLE_MIN
+        turn = WHEEL_ANGLE_MAX
+        counter_turn = WHEEL_ANGLE_MIN
+
 
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
