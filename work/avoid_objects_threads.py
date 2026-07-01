@@ -26,7 +26,7 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 
 scan = []
 
-SCAN_ANGLE = 80
+SCAN_ANGLE = 70
 SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
@@ -103,10 +103,10 @@ def bypass(robot, bypass_direction, obj_angle, distance_cm):
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
     # print("sleep time", sleep_time)
-    sleep_time = 3
+    sleep_time = 2
 
     # backward a bit first
-    robot.motor.drive(Direction.BACKWARD, AVOID_OBJ_SPEED)
+    robot.motor.drive(Direction.BACKWARD, BYPASS_SPEED)
     robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
     time.sleep(3 * (1 / (distance_cm/10) ) ) # TODO ajuster selon la distance avec l'obstacle
 
