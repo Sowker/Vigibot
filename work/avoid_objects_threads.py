@@ -65,9 +65,8 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
             time.sleep(SCAN_WAIT_TIME)
             distance_cm = robot.ultrasonic.read_mm()/10
             data.append(distance_cm)
-            data_str = str(round(distance_cm)) + " " + data_str
+            data_str = str(round(distance_cm, 4)) + " " + data_str
         print(data_str)
-        print()
         robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
         return data
 
@@ -148,7 +147,7 @@ def bypass(robot, bypass_direction, obj_idx, distance_cm):
     robot.head.set_angle_motor(0, turn)
     time.sleep(0.3)
     robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(sleep_time*0.6)
+    time.sleep(sleep_time*0.8)
 
     # reset T pose
     robot.motor.stop()
