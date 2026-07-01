@@ -31,6 +31,10 @@ SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
+turning_angle = 20
+BYPASS_RIGHT_ANGLE = WHEEL_ANGLE_CENTER - turning_angle
+BYPASS_LEFT_ANGLE = WHEEL_ANGLE_CENTER + turning_angle
+
 
 AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.35
 BYPASS_SPEED = SPEED_NORMAL_PCT * 0.8
@@ -86,25 +90,25 @@ def bypass_side(index):
         return TURN_RIGHT
 
 
-def bypass(robot, bypass_direction, obj_angle):
+def bypass(robot, bypass_direction, obj_angle, distance_cm):
     """Bypassing an object by the left or by the right"""
     if bypass_direction == TURN_RIGHT: # good direction from indications
-        turn = WHEEL_ANGLE_MIN
-        counter_turn = WHEEL_ANGLE_MAX
+        turn = BYPASS_RIGHT_ANGLE
+        counter_turn = BYPASS_LEFT_ANGLE
     else:
-        turn = WHEEL_ANGLE_MAX
-        counter_turn = WHEEL_ANGLE_MIN
+        turn = BYPASS_LEFT_ANGLE
+        counter_turn = BYPASS_RIGHT_ANGLE
 
 
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
     # print("sleep time", sleep_time)
-    sleep_time = 2
+    sleep_time = 3
 
-    # # backward a bit first
-    # robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
-    # robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-    # time.sleep(sleep_time/5) # TODO ajuster selon la distance avec l'obstacle
+    # backward a bit first
+    robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
+    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
+    time.sleep(2 * (1 / (distance_cm/10) ) ) # TODO ajuster selon la distance avec l'obstacle
 
     # turn
     robot.head.set_angle_motor(0, turn)
@@ -177,12 +181,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
                         print("turn right")
                         robot.motor.stop()
                         # input("next action")
-                        bypass(robot, TURN_RIGHT, object_angle)
+                        bypass(robot, TURN_RIGHT, object_angle, min_dist)
                     else:
                         print("turn left")
                         robot.motor.stop()
                         # input("next action")
-                        bypass(robot, TURN_LEFT, object_angle)
+                        bypass(robot, TURN_LEFT, object_angle, min_dist)
                 elif not driving:
                     print("drive")
                     robot.motor.stop()
