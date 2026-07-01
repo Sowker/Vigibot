@@ -134,6 +134,7 @@ def thread_controller(robot: Robot, interval: float) -> None:
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
     try:
+        driving = False
         while True:
             with robot.state.lock: # stopping the loop when program is stopped
                 if not robot.state.running:
@@ -145,20 +146,25 @@ def thread_controller(robot: Robot, interval: float) -> None:
                 min_dist = min(actual_scan)
                 if min_dist <= SCAN_DIST_ACTION:
                     robot.motor.stop()
+                    driving = False
                     object_angle = get_absolute_angle(actual_scan, min_dist)
                     print("min_dist", min_dist)
                     print("object angle ", object_angle)
                     if bypass_side(actual_scan, min_dist) == TURN_RIGHT:
                         print("turn right")
+                        robot.motor.stop()
                         input("next action")
                         bypass(robot, TURN_RIGHT, object_angle)
                     else:
                         print("turn left")
+                        robot.motor.stop()
                         input("next action")
                         bypass(robot, TURN_LEFT, object_angle)
-                else:
+                elif not driving:
                     print("drive")
+                    robot.motor.stop()
                     input("next action")
+                    driving = True
                     robot.motor.drive(Direction.FORWARD, AVOID_OBJ_SPEED)
             else:
                 print("no data yet")
