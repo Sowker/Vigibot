@@ -108,7 +108,7 @@ def bypass(robot, bypass_direction, obj_angle, distance_cm):
     # backward a bit first
     robot.motor.drive(Direction.BACKWARD, BYPASS_SPEED)
     robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-    time.sleep(0.5 * (1 / (distance_cm/10) ) ) # TODO ajuster selon la distance avec l'obstacle
+    time.sleep(0.3 * (1 / (distance_cm/10) ) ) # TODO ajuster selon la distance avec l'obstacle
     robot.motor.stop()
 
     # turn
