@@ -68,13 +68,12 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
 
     log.info("Thread arrêté")
 
-def bypass_side(scan, min_dist):
+def bypass_side(index):
     """Determine if we should bypass by the left of the right, given a distance and a scan"""
-    index = scan.index(min_dist)
     angle = HEAD_ANGLE_CENTER + (SCAN_ANGLE / 2) - index
-    if angle <= HEAD_ANGLE_CENTER:
+    if angle <= HEAD_ANGLE_CENTER: # if object on the right
         return TURN_LEFT
-    else:
+    else: # object on the left
         return TURN_RIGHT
 
 
@@ -118,16 +117,14 @@ def bypass(robot, bypass_direction, obj_angle):
     robot.motor.stop()
     robot.head.set_angle_motor(0, HEAD_ANGLE_CENTER)
 
-def get_absolute_angle(scan, dist):
-    """From a given distance in a scan we determine the absolute angle from the front of the robot"""
-    idx = scan.index(dist)
-    print("idx ", idx)
-    if idx <= SCAN_ANGLE/2: #left
-        print("left")
-        return SCAN_ANGLE/2 - idx
-    else: # right
-        print("right")
-        return idx - SCAN_ANGLE/2
+# def get_absolute_angle(scan, idx):
+#     """From a given distance in a scan we determine the absolute angle from the front of the robot"""
+#     if idx <= SCAN_ANGLE/2: #left
+#         print("left")
+#         return SCAN_ANGLE/2 - idx
+#     else: # right
+#         print("right")
+#         return idx - SCAN_ANGLE/2
 
 
 def thread_controller(robot: Robot, interval: float) -> None:
@@ -147,14 +144,19 @@ def thread_controller(robot: Robot, interval: float) -> None:
             # DRIVING AVOID OBJECTS LOGIC
             if scan:
                 actual_scan = scan
+                for e in scan:
+                    print(round(e), end="")
+                print()
                 min_dist = min(actual_scan)
                 if min_dist <= SCAN_DIST_ACTION:
                     robot.motor.stop()
                     driving = False
-                    object_angle = get_absolute_angle(actual_scan, min_dist)
                     print("min_dist", min_dist)
-                    print("object angle ", object_angle)
-                    if bypass_side(actual_scan, min_dist) == TURN_RIGHT:
+                    min_dist_idx = scan.index(min_dist)
+                    print(min_dist_idx)
+                    object_angle = 0  # = get_absolute_angle(actual_scan, min_dist_idx)
+                    # print("object angle ", object_angle)
+                    if bypass_side(min_dist_idx) == TURN_RIGHT:
                         print("turn right")
                         robot.motor.stop()
                         input("next action")
