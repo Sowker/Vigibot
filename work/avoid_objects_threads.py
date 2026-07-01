@@ -118,10 +118,10 @@ def bypass(robot, bypass_direction, obj_idx, distance_cm):
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
     obj_angle = get_absolute_angle(obj_idx, bypass_direction)
     print("obj angle ", obj_angle, " obj_idx ", obj_idx, " bypass dir ", bypass_direction)
-    if obj_angle <= 17:
+    if obj_angle <= 22:
         print("object close")
         sleep_time = 2
-    elif obj_angle <= 25:
+    elif obj_angle <= 27:
         print("object mid")
         sleep_time = 1.5
     else:
