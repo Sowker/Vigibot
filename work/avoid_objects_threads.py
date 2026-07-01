@@ -182,12 +182,12 @@ def thread_controller(robot: Robot, interval: float) -> None:
                         print("turn right")
                         robot.motor.stop()
                         # input("next action")
-                        bypass(robot, TURN_RIGHT, object_angle, min_dist)
+                        # bypass(robot, TURN_RIGHT, object_angle, min_dist)
                     else:
                         print("turn left")
                         robot.motor.stop()
                         # input("next action")
-                        bypass(robot, TURN_LEFT, object_angle, min_dist)
+                        # bypass(robot, TURN_LEFT, object_angle, min_dist)
                 elif not driving:
                     print("drive")
                     robot.motor.stop()
