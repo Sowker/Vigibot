@@ -65,7 +65,7 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
             time.sleep(SCAN_WAIT_TIME)
             distance_cm = robot.ultrasonic.read_mm()/10
             data.append(distance_cm)
-            data_str = str(round(distance_cm, 4)) + " " + data_str
+            data_str = str(round(distance_cm, 1)) + " " + data_str
         print(data_str)
         robot.head.set_angle_motor(HR_MOTOR, HEAD_ANGLE_CENTER)
         return data
@@ -119,11 +119,11 @@ def bypass(robot, bypass_direction, obj_idx, distance_cm):
     obj_angle = get_absolute_angle(obj_idx, bypass_direction)
     print("obj angle ", obj_angle, " obj_idx ", obj_idx, " bypass dir ", bypass_direction)
     if obj_angle <= SCAN_ANGLE/4:
-        print("object far")
-        sleep_time = 1
-    else:
         print("object close")
         sleep_time = 2
+    else:
+        print("object far")
+        sleep_time = 1
     # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
     # sleep_time = 2 * (SCAN_ANGLE/2 - obj_angle)
     # sleep_time = 2
