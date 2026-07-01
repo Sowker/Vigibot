@@ -40,7 +40,7 @@ AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.35
 BYPASS_SPEED = SPEED_NORMAL_PCT * 0.8
 
 SCAN_STEP = 10
-SCAN_WAIT_TIME = 0.1
+SCAN_WAIT_TIME = 0.2
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle en balayant de droite à gauche et met à jour la variable global scan."""
