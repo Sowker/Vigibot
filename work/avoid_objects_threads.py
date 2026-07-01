@@ -35,6 +35,8 @@ TURN_LEFT = False
 AVOID_OBJ_SPEED = SPEED_NORMAL_PCT * 0.4
 BYPASS_SPEED = AVOID_OBJ_SPEED
 
+SCAN_STEP = 5
+
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle en balayant de droite à gauche et met à jour la variable global scan."""
     log = logger.get_logger("US")
@@ -51,9 +53,9 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
         robot.head.set_angle_motor(HR_MOTOR, start_position)      #setting at start position
         time.sleep(0.3) # waiting head to be ready
         data_str = ""
-        for angle in range(start_position, end_position+1): # scanning from left ro right
+        for angle in range(start_position, end_position+1, SCAN_STEP): # scanning from left ro right
             robot.head.set_angle_motor(HR_MOTOR, angle)
-            time.sleep(0.01)
+            time.sleep(0.1)
             distance_cm = robot.ultrasonic.read_mm()/10
             data.append(distance_cm)
             data_str = str(distance_cm) + " " + data_str
@@ -76,7 +78,7 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
 
 def bypass_side(index):
     """Determine if we should bypass by the left of the right, given an index"""
-    angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index
+    angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index * SCAN_STEP
     if angle <= HEAD_ANGLE_CENTER: # if object on the right
         return TURN_LEFT
     else: # object on the left
