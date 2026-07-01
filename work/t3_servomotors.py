@@ -17,9 +17,9 @@ SERVO_PCA.frequency = 50                 #
 
 
 # Limites angulaires (mécaniques)
-WHEEL_ANGLE_MIN     = 52    # degrés — braquage gauche max
-WHEEL_ANGLE_CENTER  = 90     # degrés — tout droit
-WHEEL_ANGLE_MAX     = 128    # degrés — braquage droite max
+WHEEL_ANGLE_MIN     = 53    # degrés — braquage gauche max
+WHEEL_ANGLE_CENTER  = 91     # degrés — tout droit
+WHEEL_ANGLE_MAX     = 129    # degrés — braquage droite max
 
 HEAD_ANGLE_MIN      = 13     # degrés
 HEAD_ANGLE_CENTER   = 93     # degrés

@@ -27,7 +27,7 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 scan = []
 
 SCAN_ANGLE = 60
-SCAN_DIST_ACTION = 30 # in cm !!!
+SCAN_DIST_ACTION = 20 # in cm !!!
 
 TURN_RIGHT = True
 TURN_LEFT = False
