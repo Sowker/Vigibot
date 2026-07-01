@@ -108,22 +108,29 @@ def bypass(robot, bypass_direction, obj_idx, distance_cm):
         turn = BYPASS_LEFT_ANGLE
         counter_turn = BYPASS_RIGHT_ANGLE
 
+    obj_angle = get_absolute_angle(obj_idx, bypass_direction)
+    ratio_angle = obj_angle / (SCAN_ANGLE/2)
+    ratio_distance = distance_cm / SCAN_DIST_ACTION
+
     # backward a bit first
     robot.motor.drive(Direction.BACKWARD, BYPASS_SPEED)
     robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-    time.sleep(0.1 * (1 / (distance_cm/10) ) ) # adjust how much we go backward depending on the distance to the obstacle
+
+    backward_sleep_time = 1/ratio_angle + 2/ratio_distance # between 0 and 3 seconds, inversly proportional to the distance and to the angle
+    time.sleep(backward_sleep_time)
+    print("backward_sleep_time ", backward_sleep_time)
+    # time.sleep(0.1 * (1 / (distance_cm/10) ) ) # adjust how much we go backward depending on the distance to the obstacle
     robot.motor.stop()
 
 
     # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
-    obj_angle = get_absolute_angle(obj_idx, bypass_direction)
     print("obj angle ", obj_angle, " obj_idx ", obj_idx, " bypass dir ", bypass_direction)
     if obj_angle <= 22:
         print("object close")
-        sleep_time = 2
+        sleep_time = 1.8
     elif obj_angle <= 27:
         print("object mid")
-        sleep_time = 1.5
+        sleep_time = 1.4
     else:
         print("object far")
         sleep_time = 1
