@@ -16,10 +16,10 @@ SERVO_PCA = PCA9685(I2C, address=0x5f)   # default address 0x40
 SERVO_PCA.frequency = 50                 #
 
 
-# Limites angulaires (mécaniques)
-WHEEL_ANGLE_MIN     = 48    # degrés — braquage gauche max
-WHEEL_ANGLE_CENTER  = 86     # degrés — tout droit
-WHEEL_ANGLE_MAX     = 124    # degrés — braquage droite max
+# Limites angulaires (mécaniques)  (PROBABLEMENT INVERSéES)
+WHEEL_ANGLE_MIN     = 46    # degrés — braquage gauche max
+WHEEL_ANGLE_CENTER  = 84     # degrés — tout droit
+WHEEL_ANGLE_MAX     = 122    # degrés — braquage droite max
 
 HEAD_ANGLE_MIN      = 13     # degrés
 HEAD_ANGLE_CENTER   = 93     # degrés
