@@ -17,45 +17,47 @@ from t11_robot import Robot
 
 from picamera2 import Picamera2
 
+
 class Direction:
     FORWARD = "forward"
     BACKWARD = "backward"
 
+
 # ── PARAMÈTRES DE CONFIGURATION REGLABLES ─────────────────────────────────────
-SPEED_MAX_PCT     = 48 
-SPEED_MIN_PCT     = 37  
+SPEED_MAX_PCT = 48
+SPEED_MIN_PCT = 37
 
-STEER_CENTER_DEG  = 90
-MAX_STEER_DELTA   = 45  # Braquage max autorisé (90 +/- 45)
+STEER_CENTER_DEG = 90
+MAX_STEER_DELTA = 45  # Braquage max autorisé (90 +/- 45)
 
-MIN_LINE_AREA     = 300  
-CTRL_INTERVAL     = 0.05
-US_INTERVAL       = 0.06  # Intervalle de rafraîchissement ultrason
-LED_INTERVAL      = 0.1   # Intervalle de rafraîchissement des LED
+MIN_LINE_AREA = 300
+CTRL_INTERVAL = 0.05
+US_INTERVAL = 0.06  # Intervalle de rafraîchissement ultrason
+LED_INTERVAL = 0.1  # Intervalle de rafraîchissement des LED
 
-
-THRESHOLD_DEADZONE = 5     
-ALPHA_SMOOTHING    = 0.35  
-THRESHOLD_URGENCY  = 30    
+THRESHOLD_DEADZONE = 5
+ALPHA_SMOOTHING = 0.35
+THRESHOLD_URGENCY = 30
 
 # Pondérations nominales
-WEIGHT_POSITION    = 0.65  
-WEIGHT_DIRECTION   = 0.35  
+WEIGHT_POSITION = 0.65
+WEIGHT_DIRECTION = 0.35
 
 # Variables de lissage global
 smoothed_angle_delta = 0.0
 
 lock = threading.Lock()
 telemetry = {
-    "fps":           0.0,
-    "line_seen":     "NON",
-    "error_px":      0,
-    "stable_dir":    "AUCUNE",
-    "distance_mm":   0,
-    "speed_pct":     0,
-    "emergency":     False
+    "fps": 0.0,
+    "line_seen": "NON",
+    "error_px": 0,
+    "stable_dir": "AUCUNE",
+    "distance_mm": 0,
+    "speed_pct": 0,
+    "emergency": False
 }
 
+current_encoded_frame = None
 system_running = True
 app = Flask(__name__)
 
@@ -67,7 +69,7 @@ def get_red_mask(roi: np.ndarray) -> np.ndarray:
     upper_red1 = np.array([10, 255, 255])
     lower_red2 = np.array([160, 100, 100])
     upper_red2 = np.array([180, 255, 255])
-    
+
     mask1 = cv2.inRange(hsv_roi, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv_roi, lower_red2, upper_red2)
     mask_roi = cv2.bitwise_or(mask1, mask2)
@@ -83,13 +85,13 @@ def process_frame(frame: np.ndarray, robot_instance: Robot) -> np.ndarray:
     output = frame.copy()
 
     # Remontée agressive des ROIs vers le haut de l'image (Horizon)
-    roi_low_top, roi_low_bot   = int(height * 0.70), int(height * 0.90)
+    roi_low_top, roi_low_bot = int(height * 0.70), int(height * 0.90)
     roi_high_top, roi_high_bot = int(height * 0.20), int(height * 0.40)
 
-    mask_low  = get_red_mask(frame[roi_low_top:roi_low_bot, 0:width])
+    mask_low = get_red_mask(frame[roi_low_top:roi_low_bot, 0:width])
     mask_high = get_red_mask(frame[roi_high_top:roi_high_bot, 0:width])
 
-    M_low  = cv2.moments(mask_low)
+    M_low = cv2.moments(mask_low)
     M_high = cv2.moments(mask_high)
 
     # Affichage des lignes de guidage réajustées
@@ -116,38 +118,38 @@ def process_frame(frame: np.ndarray, robot_instance: Robot) -> np.ndarray:
     line_seen = "NON"
     stable_dir = "RECHERCHE LIGNE"
     border_color = (0, 255, 0)
-    
+
     force_low_speed = False
-    bypass_smoothing = False  
+    bypass_smoothing = False
 
     # ── CALCUL TRAJECTOIRE ──
     if pt_low is not None:
         line_seen = "OUI"
         error_low_px = pt_low[0] - center_x
         angle_base_low = (error_low_px / center_x) * MAX_STEER_DELTA
-        
+
         if abs(error_low_px) > THRESHOLD_URGENCY:
             target_angle_delta = angle_base_low
             stable_dir = f"URGENCE CRITIQUE BAS"
             border_color = (0, 100, 255)
-            bypass_smoothing = True 
-            
+            bypass_smoothing = True
+
         elif pt_high is not None:
             cv2.line(output, pt_low, pt_high, (255, 0, 255), 2)
 
             dx = pt_high[0] - pt_low[0]
-            dy = pt_low[1] - pt_high[1] 
+            dy = pt_low[1] - pt_high[1]
             angle_vector_deg = np.degrees(np.arctan2(dx, dy))
 
             if abs(angle_vector_deg) > 20.0:
                 direction_sign = np.sign(dx) if dx != 0 else np.sign(error_low_px)
                 target_angle_delta = direction_sign * MAX_STEER_DELTA
-                
+
                 stable_dir = f"🚨 COUPE-FILE ULTRA-ANTICIPÉ ({int(angle_vector_deg)}°)"
-                border_color = (255, 0, 128)  
-                force_low_speed = True       
-                bypass_smoothing = True  
-                
+                border_color = (255, 0, 128)
+                force_low_speed = True
+                bypass_smoothing = True
+
             else:
                 midpoint_x = (pt_low[0] + pt_high[0]) / 2.0
                 error_position_px = midpoint_x - center_x
@@ -159,14 +161,15 @@ def process_frame(frame: np.ndarray, robot_instance: Robot) -> np.ndarray:
                     stable_dir = "COMBO OVERRIDE : VERTICALE"
                     border_color = (255, 191, 0)
                 else:
-                    target_angle_delta = (angle_from_position * WEIGHT_POSITION) + (angle_from_direction * WEIGHT_DIRECTION)
+                    target_angle_delta = (angle_from_position * WEIGHT_POSITION) + (
+                                angle_from_direction * WEIGHT_DIRECTION)
                     stable_dir = "COMBO DICTION + POSITION"
-        
+
         else:
             target_angle_delta = angle_base_low * 1.3
             stable_dir = "SUIVI SIMPLE BAS"
             bypass_smoothing = True
-            
+
     elif pt_high is not None:
         line_seen = "OUI"
         error_high_px = pt_high[0] - center_x
@@ -178,8 +181,9 @@ def process_frame(frame: np.ndarray, robot_instance: Robot) -> np.ndarray:
         if bypass_smoothing:
             smoothed_angle_delta = target_angle_delta
         else:
-            smoothed_angle_delta = (ALPHA_SMOOTHING * target_angle_delta) + ((1.0 - ALPHA_SMOOTHING) * smoothed_angle_delta)
-        
+            smoothed_angle_delta = (ALPHA_SMOOTHING * target_angle_delta) + (
+                        (1.0 - ALPHA_SMOOTHING) * smoothed_angle_delta)
+
         if abs(smoothed_angle_delta) <= THRESHOLD_DEADZONE:
             final_angle_delta = 0.0
         else:
@@ -200,7 +204,7 @@ def process_frame(frame: np.ndarray, robot_instance: Robot) -> np.ndarray:
     with robot_instance.state.lock:
         is_emergency = robot_instance.state.emergency_stop
         current_dist = getattr(robot_instance.state, 'distance_mm', 0)
-        
+
         if is_emergency:
             calculated_speed = 0
 
@@ -214,12 +218,12 @@ def process_frame(frame: np.ndarray, robot_instance: Robot) -> np.ndarray:
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, border_color, 2)
 
     with lock:
-        telemetry["line_seen"]   = line_seen
-        telemetry["error_px"]    = int(final_angle_delta)
-        telemetry["stable_dir"]  = stable_dir
+        telemetry["line_seen"] = line_seen
+        telemetry["error_px"] = int(final_angle_delta)
+        telemetry["stable_dir"] = stable_dir
         telemetry["distance_mm"] = current_dist
-        telemetry["speed_pct"]   = calculated_speed
-        telemetry["emergency"]   = is_emergency
+        telemetry["speed_pct"] = calculated_speed
+        telemetry["emergency"] = is_emergency
 
     return output
 
@@ -231,7 +235,7 @@ def thread_controller_camera_line(robot: Robot, interval: float) -> None:
         with robot.state.lock:
             if not robot.state.running or not system_running:
                 break
-            emergency    = robot.state.emergency_stop
+            emergency = robot.state.emergency_stop
             target_speed = robot.state.calculated_speed
             target_angle = robot.state.calculated_angle
 
@@ -267,7 +271,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
             dist_mm = 999  # Fallback si erreur matérielle d'écho
 
         with robot.state.lock:
-            robot.state.distance_mm    = dist_mm
+            robot.state.distance_mm = dist_mm
             # Déclenchement arrêt d'urgence matériel
             robot.state.emergency_stop = dist_mm < 120
 
@@ -283,7 +287,7 @@ def thread_LED(robot: Robot, interval: float):
             if not robot.state.running or not system_running:
                 break
             emergency = robot.state.emergency_stop
-            angle     = robot.state.calculated_angle
+            angle = robot.state.calculated_angle
 
         # Sélection de l'état lumineux selon les angles réels de braquage calculés
         if emergency:
@@ -315,10 +319,9 @@ def thread_LED(robot: Robot, interval: float):
         pass
 
 
-# STREAMING FLASK ET ACCÈS MATÉRIEL CAMERA
-def generate_frames(robot_instance: Robot):
-    global system_running
-    
+def thread_camera_loop(robot_instance: Robot):
+    """Boucle autonome qui lit la caméra en continu et met à jour les données"""
+    global system_running, current_encoded_frame
 
     picam = Picamera2()
     config = picam.create_video_configuration(main={"size": (640, 480)})
@@ -333,7 +336,7 @@ def generate_frames(robot_instance: Robot):
         while system_running:
             frame = picam.capture_array()
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            
+
             # Calcul du FPS
             frame_count += 1
             elapsed = time.time() - t0
@@ -342,17 +345,28 @@ def generate_frames(robot_instance: Robot):
                     telemetry["fps"] = round(frame_count / elapsed, 1)
                 frame_count, t0 = 0, time.time()
 
+            # Analyse l'image et met à jour les consignes moteurs immédiatement
             processed = process_frame(frame, robot_instance)
-            
-            # Encodage pour le streaming web
+
+            # Encode l'image traitée en JPG et la stocke pour Flask
             _, enc = cv2.imencode(".jpg", processed)
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + enc.tobytes() + b"\r\n")
-            
+            with lock:
+                current_encoded_frame = enc.tobytes()
+
+            time.sleep(0.01)  # Petite pause pour le CPU
     except Exception as e:
-        print(f"Erreur flux vidéo: {e}")
+        print(f"Erreur flux vidéo autonome: {e}")
     finally:
         picam.stop()
         picam.close()
+
+def generate_frames(robot_instance: Robot):
+    """Envoie simplement à Flask la dernière image générée par le thread autonome."""
+    global system_running, current_encoded_frame
+    while system_running:
+        if current_encoded_frame is not None:
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + current_encoded_frame + b"\r\n")
+        time.sleep(0.04)
 
 HTML_INTERFACE = """<!DOCTYPE html>
 <html lang="fr">
@@ -441,7 +455,7 @@ header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-botto
 .gauge-track{height:5px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden}
 .gauge-fill{height:100%;border-radius:3px;transition:width .18s ease}
 .gauge-fill.g-blue{background:var(--c-blue)}
-.gauge-fill.g-green{background:var(--c-green)}
+.gauge-fill.g-green(background:var(--c-green)}
 .gauge-fill.g-red{background:var(--c-red)}
 .gauge-fill.g-amber{background:var(--c-amber)}
 
@@ -480,7 +494,6 @@ header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-botto
 
 <div class="layout">
 
-  <!-- FLUX VIDÉO -->
   <div class="video-card">
     <img src="/video_feed" alt="Flux caméra du robot">
     <div class="video-hud">
@@ -494,10 +507,8 @@ header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-botto
     <span id="line-status-text" style="font-size:12px;color:var(--muted);font-family:var(--mono)">Ligne non détectée</span>
   </div>
 
-  <!-- PANNEAU DROITE -->
   <div class="panel">
 
-    <!-- Cinématique -->
     <div class="card">
       <div class="card-header">
         <div class="icon">
@@ -518,7 +529,6 @@ header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-botto
       </div>
     </div>
 
-    <!-- Sécurité -->
     <div class="card">
       <div class="card-header">
         <div class="icon">
@@ -539,7 +549,6 @@ header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-botto
       </div>
     </div>
 
-    <!-- Vision -->
     <div class="card">
       <div class="card-header">
         <div class="icon">
@@ -557,15 +566,10 @@ header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-botto
       </div>
     </div>
 
-    <!-- Stratégie -->
     <div class="strat-card">
       <div class="strat-label">Stratégie active</div>
       <div id="strat-value">RECHERCHE LIGNE...</div>
     </div>
-
-    <!-- ZONE MODULAIRE — Ajoutez vos futurs composants ici -->
-    <!-- <div id="slot-module-imu" class="card" style="display:none"></div>  -->
-    <!-- <div id="slot-module-log" class="card" style="display:none"></div>  -->
 
   </div>
 </div>
@@ -668,16 +672,17 @@ setInterval(tick, 80);
 
 
 @app.route("/")
-def index(): 
+def index():
     return render_template_string(HTML_INTERFACE)
 
+
 @app.route("/video_feed")
-def video_feed(): 
+def video_feed():
     return Response(generate_frames(global_robot_ref), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 @app.route("/data")
 def get_data():
-    with lock: 
+    with lock:
         return jsonify(telemetry)
 
 
@@ -690,24 +695,27 @@ if __name__ == "__main__":
 
     robot = Robot(args)
     robot.init()
-    
+
     # Orientation physique initiale de l'axe vertical caméra
     robot.head.set_angle_motor(2, 60)
-    
+
     with robot.state.lock:
         robot.state.calculated_speed = 0
         robot.state.calculated_angle = STEER_CENTER_DEG
-        robot.state.distance_mm    = 999
+        robot.state.distance_mm = 999
         robot.state.emergency_stop = False
-        
-    global_robot_ref = robot 
+
+    global_robot_ref = robot
 
     # Démarrage synchrone de tous les threads
     threads = [
         threading.Thread(target=thread_controller_camera_line, args=(robot, CTRL_INTERVAL), name="CTRL", daemon=True),
         threading.Thread(target=thread_ultrasonic, args=(robot, US_INTERVAL), name="US", daemon=True),
         threading.Thread(target=thread_LED, args=(robot, LED_INTERVAL), name="LED", daemon=True),
-        threading.Thread(target=lambda: app.run(host="0.0.0.0", port=5000, debug=False, threaded=True, use_reloader=False), name="WEB", daemon=True)
+        threading.Thread(target=thread_camera_loop, args=(robot,), name="CAM_AUTO", daemon=True),
+        threading.Thread(
+            target=lambda: app.run(host="0.0.0.0", port=5000, debug=False, threaded=True, use_reloader=False),
+            name="WEB", daemon=True)
     ]
 
     for t in threads:
@@ -721,8 +729,8 @@ if __name__ == "__main__":
         pass
 
     finally:
-        system_running = False  
-        
+        system_running = False
+
         with robot.state.lock:
             robot.state.running = False
 
