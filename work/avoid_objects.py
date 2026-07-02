@@ -14,7 +14,7 @@ from adafruit_pca9685 import PCA9685
 import logger
 from t11_argument_parser import parse_args
 from t11_robot import Robot
-from avoid_objects_threads import thread_ultrasonic_scanning, thread_controller
+from avoid_objects_threads import thread_ultrasonic_scanning, thread_object_controller
 
 # ═══════════════════════════════════════════════════════════════════
 #  POINT D'ENTRÉE
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     threads = [
         threading.Thread(target=thread_ultrasonic_scanning, args=(robot, args.sensor_interval), name="US", daemon=True),
-        threading.Thread(target=thread_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
+        threading.Thread(target=thread_object_controller, args=(robot, args.ctrl_interval), name="CTRL", daemon=True),
     ]
 
     for t in threads:

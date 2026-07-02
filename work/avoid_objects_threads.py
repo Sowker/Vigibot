@@ -77,99 +77,98 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
 
         scan = scan_cm() # scanning and putting the result in the global scan variable
 
-        # time.sleep(interval) # no need of a time interval because there are already time.sleep statement in scan_cm
-
     log.info("Thread arrêté")
 
-
-def bypass_side(index):
-    """Determine if we should bypass by the left of the right, given an index"""
-    angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index * SCAN_STEP
-    if angle <= HEAD_ANGLE_CENTER: # if object on the right
-        return TURN_LEFT
-    else: # object on the left
-        return TURN_RIGHT
-
-
-def get_absolute_angle(idx, bypass_side):
-    """From a given distance in a scan we determine the absolute angle from the front of the robot"""
-    angle = HEAD_ANGLE_CENTER - SCAN_ANGLE/2 + idx * SCAN_STEP
-    if bypass_side == TURN_RIGHT: # meaning object on left
-        return angle - HEAD_ANGLE_CENTER
-    else: # meaning object on right
-        return HEAD_ANGLE_CENTER - angle
-
-def bypass(robot, bypass_direction, obj_idx, distance_cm):
-    """Bypassing an object by the left or by the right"""
-    if bypass_direction == TURN_RIGHT: # good direction from indications
-        turn = BYPASS_RIGHT_ANGLE
-        counter_turn = BYPASS_LEFT_ANGLE
-    else:
-        turn = BYPASS_LEFT_ANGLE
-        counter_turn = BYPASS_RIGHT_ANGLE
-
-    obj_angle = get_absolute_angle(obj_idx, bypass_direction)
-    #print("obj angle ", obj_angle, " obj_idx ", obj_idx, " bypass dir ", bypass_direction)
-    ratio_angle = obj_angle / (SCAN_ANGLE/2)
-    ratio_distance = distance_cm / SCAN_DIST_ACTION
-    #print("ratio_angle ", str(obj_angle),"/", str(SCAN_ANGLE/2),"=", ratio_angle, " ratio_distance = ",str(distance_cm),"/",str(SCAN_DIST_ACTION), ratio_distance)
-
-    # backward a bit first
-    robot.motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT * 0.5)
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-    print("1/ratio_angle ",str(1/ratio_angle))
-    print("2/ratio_distance ",str(2/ratio_distance))
-    backward_sleep_time = max(0, ((1-ratio_angle) + (2-ratio_distance*2))) # between 0 and 1 seconds, inversly proportional to the distance and to the angle
-    time.sleep(backward_sleep_time)
-    print("backward_sleep_time ", backward_sleep_time)
-    # time.sleep(0.1 * (1 / (distance_cm/10) ) ) # adjust how much we go backward depending on the distance to the obstacle
-    robot.motor.stop()
-
-
-    # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
-    if obj_angle <= 22:
-        print("object close")
-        sleep_time = 1.8
-    elif obj_angle <= 27:
-        print("object mid")
-        sleep_time = 1.4
-    else:
-        print("object far")
-        sleep_time = 1
-    # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
-    # sleep_time = 2 * (SCAN_ANGLE/2 - obj_angle)
-    # sleep_time = 2
-
-    # turn
-    robot.head.set_angle_motor(0, turn)
-    time.sleep(0.3)
-    robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(sleep_time)
-
-    robot.motor.stop()
-
-    # counter_turn
-    robot.head.set_angle_motor(0, counter_turn)
-    time.sleep(0.3)
-    robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(2 * sleep_time)
-    robot.motor.stop()
-
-    # realign
-    robot.head.set_angle_motor(0, turn)
-    time.sleep(0.3)
-    robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
-    time.sleep(sleep_time*0.8)
-
-    # reset T pose
-    robot.motor.stop()
-    robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
-
-
-def thread_controller(robot: Robot, interval: float) -> None:
+def thread_object_controller(robot: Robot, interval: float) -> None:
     """
     Boucle de décision : lit l'action synthétisée, décide et pilote les moteurs.
     """
+
+    def bypass_side(index):
+        """Determine if we should bypass by the left of the right, given an index"""
+        angle = HEAD_ANGLE_CENTER - (SCAN_ANGLE / 2) + index * SCAN_STEP
+        if angle <= HEAD_ANGLE_CENTER:  # if object on the right
+            return TURN_LEFT
+        else:  # object on the left
+            return TURN_RIGHT
+
+    def bypass(robot, bypass_direction, obj_idx, distance_cm):
+        """Bypassing an object by the left or by the right"""
+
+        def get_absolute_angle(idx, bypass_side):
+            """From a given distance in a scan we determine the absolute angle from the front of the robot"""
+            angle = HEAD_ANGLE_CENTER - SCAN_ANGLE / 2 + idx * SCAN_STEP
+            if bypass_side == TURN_RIGHT:  # meaning object on left
+                return angle - HEAD_ANGLE_CENTER
+            else:  # meaning object on right
+                return HEAD_ANGLE_CENTER - angle
+
+        if bypass_direction == TURN_RIGHT:  # good direction from indications
+            turn = BYPASS_RIGHT_ANGLE
+            counter_turn = BYPASS_LEFT_ANGLE
+        else:
+            turn = BYPASS_LEFT_ANGLE
+            counter_turn = BYPASS_RIGHT_ANGLE
+
+        obj_angle = get_absolute_angle(obj_idx, bypass_direction)
+        # print("obj angle ", obj_angle, " obj_idx ", obj_idx, " bypass dir ", bypass_direction)
+        ratio_angle = obj_angle / (SCAN_ANGLE / 2)
+        ratio_distance = distance_cm / SCAN_DIST_ACTION
+        # print("ratio_angle ", str(obj_angle),"/", str(SCAN_ANGLE/2),"=", ratio_angle, " ratio_distance = ",str(distance_cm),"/",str(SCAN_DIST_ACTION), ratio_distance)
+
+        # backward a bit first
+        robot.motor.drive(Direction.BACKWARD, SPEED_NORMAL_PCT * 0.5)
+        robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
+        print("1/ratio_angle ", str(1 / ratio_angle))
+        print("2/ratio_distance ", str(2 / ratio_distance))
+        backward_sleep_time = max(0, ((1 - ratio_angle) + (
+                    2 - ratio_distance * 2)))  # between 0 and 1 seconds, inversly proportional to the distance and to the angle
+        time.sleep(backward_sleep_time)
+        print("backward_sleep_time ", backward_sleep_time)
+        # time.sleep(0.1 * (1 / (distance_cm/10) ) ) # adjust how much we go backward depending on the distance to the obstacle
+        robot.motor.stop()
+
+        # the sleep time allow to do a bigger or smaller maneuver depending on where is the obj (obj_angle)
+        if obj_angle <= 22:
+            print("object close")
+            sleep_time = 1.8
+        elif obj_angle <= 27:
+            print("object mid")
+            sleep_time = 1.4
+        else:
+            print("object far")
+            sleep_time = 1
+        # sleep_time = 0.1 + 0.1 * (SCAN_ANGLE/2 - obj_angle)
+        # sleep_time = 2 * (SCAN_ANGLE/2 - obj_angle)
+        # sleep_time = 2
+
+        # turn
+        robot.head.set_angle_motor(0, turn)
+        time.sleep(0.3)
+        robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
+        time.sleep(sleep_time)
+
+        robot.motor.stop()
+
+        # counter_turn
+        robot.head.set_angle_motor(0, counter_turn)
+        time.sleep(0.3)
+        robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
+        time.sleep(2 * sleep_time)
+        robot.motor.stop()
+
+        # realign
+        robot.head.set_angle_motor(0, turn)
+        time.sleep(0.3)
+        robot.motor.drive(Direction.FORWARD, BYPASS_SPEED)
+        time.sleep(sleep_time * 0.8)
+
+        # reset T pose
+        robot.motor.stop()
+        robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
+
+
+    # CONTROLLER MAIN LOGIC
     log  = logger.get_logger("CTRL")
     log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
