@@ -17,14 +17,14 @@ SPEED_HIGH = 40
 
 from CameraDetection import get_direction, init_camera, shutdown, adjust_position
 
-def get_arrow_derection(camera : Picamera2)->Direction:
+def get_arrow_detection(camera : Picamera2)->Direction:
     return get_direction(camera)
 
 def L_turn(robot : Robot, direction : str) -> None:
     robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
-    time.sleep(0.06)
+    time.sleep(0.6)
     if direction == "left":
-        for i in range(6):
+        for i in range(5):
             robot.head.steer_left(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
             time.sleep(0.20)
@@ -44,7 +44,7 @@ def L_turn(robot : Robot, direction : str) -> None:
 
 
     elif direction == "right":
-        for i in range(6):
+        for i in range(5):
             robot.head.steer_right(STEER_HARD_DEG)
             robot.motor.drive(Direction.FORWARD, SPEED_HIGH, fast_accel=True)
             time.sleep(0.20)
@@ -89,13 +89,13 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
                 robot.head.steer_center()
                 #robot.head.set_angle_motor(0, 90 - 10)
                 robot.motor.drive(Direction.BACKWARD,SPEED_TURNING_PCT, fast_accel=True)
-                time.sleep(0.2)
+                time.sleep(0.6)
             else :
                 robot.motor.stop()
                 robot.head.steer_center()
                 # robot.head.set_angle_motor(0, 90 - 10)
                 log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
-                direction = get_arrow_derection(camera)
+                direction = get_arrow_detection(camera)
                 L_turn(robot, direction)
         else:
             #  ── 3. Adjust the position of the robot to be straigth ────────────
@@ -111,7 +111,6 @@ def thread_drive(robot: Robot, interval: float, camera : Picamera2) -> None:
                 robot.head.steer_center()
                 # robot.head.set_angle_motor(0, 85)
                 robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
-
 
 def thread_ultrasonic(robot: Robot, interval: float) -> None:
     """
@@ -134,7 +133,7 @@ def thread_ultrasonic(robot: Robot, interval: float) -> None:
         with robot.state.lock:
             robot.state.distance_mm = dist_mm
             # Déclenche l'arrêt d'urgence si la distance est sous le seuil critique
-            robot.state.emergency_stop = dist_mm < 250
+            robot.state.emergency_stop = dist_mm < 350
 
         time.sleep(interval)
 
