@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     Motor(1, 1, 50)
     servo_angle = servo.Servo(pca.channels[0], min_pulse=500, max_pulse=2400, actuation_range=180)
-    servo_angle.angle = 30
+    servo_angle.angle = 55
     try:
         # avance et tourne
         while True:
