@@ -4,7 +4,7 @@ import time
 from pannel_test import get_color_mask
 
 # ── PC : webcam ──────────────────────────────────────────────────────
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 # ── Pi : remplace les 2 lignes ci-dessus par : ───────────────────────
 # from picamera2 import Picamera2
