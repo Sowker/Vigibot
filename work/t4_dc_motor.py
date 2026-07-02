@@ -15,11 +15,11 @@ MOTOR_RAMP_STEPS      = 10   # nombre de pas par seconde de rampe
 CHANNEL_MOTOR_IN1        = 15  # Moteur DC pôle +
 CHANNEL_MOTOR_IN2        = 14  # Moteur DC pôle −
 
-SPEED_NORMAL_PCT      = 35   # % puissance — ligne droite
-SPEED_TURNING_PCT     = 40   # % puissance — virage doux
+SPEED_NORMAL_PCT      = 30   # % puissance — ligne droite
+SPEED_TURNING_PCT     = 20   # % puissance — virage doux
 SPEED_ADJUSTING_PCT   = 40
 SPEED_BACKWARD        = 30   # % puissance — utilisé généralement pour aller en arrière
-SPEED_HIGH = 50
+SPEED_HIGH = 40
 
 class Direction(IntEnum):
     """Sens de marche du moteur DC."""
