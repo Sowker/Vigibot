@@ -16,6 +16,7 @@ from t4_dc_motor import DCMotor, Direction, SPEED_BACKWARD, SPEED_TURNING_PCT, S
 from t5_ultrasonic_sensor import UltrasonicSensor, PIN_ULTRASONIC_ECHO, PIN_ULTRASONIC_TRIGGER
 from t6_line_tracking import LineTracker, LinePosition, PIN_LINE_LEFT, PIN_LINE_MIDDLE, PIN_LINE_RIGHT
 from t11_buzzer_Sirene import POLICE, MII, play, close_buzzer
+from line_avoid import CircleTracker
 import logger
 
 # ── PCA9685 ────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ class Robot:
 
         self.ultrasonic   = UltrasonicSensor(cfg.us_trigger, cfg.us_echo)
         self.line_tracker = LineTracker(cfg.line_left, cfg.line_mid, cfg.line_right)
+        self.line_avoider = CircleTracker(cfg.line_left, cfg.line_mid, cfg.line_right)
         self.motor        = DCMotor(self._pca)
         self.head         = Head(self._pca)
 
