@@ -1,7 +1,6 @@
 import time
 
 from t11_robot import Robot
-import logger
 
 
 from t3_servomotors import WHEEL_ANGLE_MIN, WHEEL_ANGLE_MAX, WHEEL_ANGLE_CENTER, HEAD_ANGLE_MIN, HEAD_ANGLE_CENTER, HEAD_ANGLE_MAX
@@ -55,8 +54,6 @@ AVOID_LINE_SPEED = 20
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
     """Lit le capteur ultrason en boucle en balayant de droite à gauche et met à jour la variable global scan."""
-    log = logger.get_logger("US")
-    log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
 
     def scan_cm() -> list:
@@ -87,16 +84,12 @@ def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
 
         scan = scan_cm() # scanning and putting the result in the global scan variable
 
-    log.info("Thread arrêté")
-
 
 def thread_line_detect_avoid(robot: Robot, interval: float) -> None:
     """
     Lit l'action décodée des capteurs en boucle (via read_action)
     et met à jour directement l'action sur le RobotState.
     """
-    log = logger.get_logger("LINE")
-    log.info("Thread démarré (intervalle=%.3f s)", interval)
     global MODE
 
     while True:
@@ -112,8 +105,6 @@ def thread_line_detect_avoid(robot: Robot, interval: float) -> None:
         if current_action != CirclePosition.LOST_IN_CENTER:
             MODE = MODE_AVOID_LINE
         time.sleep(interval)
-
-    log.info("Thread arrêté")
 
 
 def thread_avoid_line_controller(robot: Robot, interval: float) -> None:
@@ -134,9 +125,6 @@ def thread_avoid_line_controller(robot: Robot, interval: float) -> None:
             CirclePosition.LOST_IN_CENTER: "recherche",
         }
         return directions.get(action, "inconnue")
-
-    log = logger.get_logger("CTRL_LINE")
-    log.info("Thread démarré (intervalle=%.3f s)", interval)
 
     # boucle pour attendre la première détection de la ligne
     while True:
@@ -159,17 +147,11 @@ def thread_avoid_line_controller(robot: Robot, interval: float) -> None:
         if emergency:
             robot.motor.stop()
             robot.head.steer_center()
-            log.warning("⚠ OBSTACLE détecté — arrêt d'urgence")
             time.sleep(interval)
             continue
 
         # Lire les capteurs bruts (gauche, milieu, droit)
         current_action = robot.state.line_action
-        log.info(
-            "État capteurs (G=%d M=%d D=%d) -> %s | direction=%s",
-            current_action.name,
-            action_direction(current_action),
-        )
 
         # Comportement d'ÉVITEMENT (s'inspire de t7 mais inversé)
         # Priorité : détection droite -> tourner à gauche; détection gauche -> tourner à droite
@@ -177,44 +159,37 @@ def thread_avoid_line_controller(robot: Robot, interval: float) -> None:
             # Approche depuis la droite -> tourner doucement à gauche
             robot.head.steer_left(15)
             robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
-            log.info("Capteur droit actif -> virage doux gauche")
 
         elif robot.state.line_action == CirclePosition.TURN_RIGHT_HARD:
             # Trop à droite -> tourner fort à gauche
             robot.head.steer_left(35)
             robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
-            log.info("Capteur droit+milieu actifs -> virage fort gauche")
 
         elif robot.state.line_action == CirclePosition.TURN_LEFT_SOFT:
             # Approche depuis la gauche -> tourner doucement à droite
             robot.head.steer_right(15)
             robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
-            log.info("Capteur gauche actif -> virage doux droite")
 
         elif robot.state.line_action == CirclePosition.TURN_LEFT_HARD:
             # Trop à gauche -> tourner fort à droite
             robot.head.steer_right(35)
             robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
-            log.info("Capteur gauche+milieu actifs -> virage fort droite")
 
         elif robot.state.line_action ==  CirclePosition.STRAIGHT:
             # Ligne centrée -> tout droit
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
-            log.info("Capteur milieu actif -> tout droit")
 
         else:
             # Aucun capteur -> avancer doucement ou chercher
             robot.head.steer_center()
             robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
-            log.info("Aucun capteur actif -> avancer (centre)")
 
         time.sleep(interval)
 
     # ── Arrêt propre en fin de thread ─────────────────────────────
     robot.motor.stop()
     robot.head.steer_center()
-    log.info("Thread arrêté")
 
 
 def thread_object_controller(robot: Robot, interval: float) -> None:
@@ -315,8 +290,6 @@ def thread_object_controller(robot: Robot, interval: float) -> None:
 
 
     # CONTROLLER MAIN LOGIC
-    log = logger.get_logger("CTRL_OBJ")
-    log.info("Thread démarré (intervalle=%.3f s)", interval)
     global scan
     try:
         driving = False
@@ -370,4 +343,3 @@ def thread_object_controller(robot: Robot, interval: float) -> None:
         # ── Arrêt propre en fin de thread ─────────────────────────────
         robot.motor.stop()
         robot.head.steer_center()
-        log.info("Thread arrêté")
