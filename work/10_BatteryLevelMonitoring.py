@@ -26,20 +26,19 @@ control_byte = cmd | (((channel << 2 | channel >> 1) & 0x07) << 4)
 
 if __name__ == "__main__":
     buffer = [1]
-    battery_vals = []
+    battery_perc_vals = []
     while True:
         device.write_then_readinto(bytes([control_byte]), buffer)
         adcValue = buffer[0]
-        print(str(adcValue))
         A0Voltage = (adcValue / 255) * 5
         ActualBatteryVoltage = A0Voltage / DivisionRatio
 
         BatteryPercentage = (ActualBatteryVoltage - WarningThreshold) / (Vref - WarningThreshold) * 100
+        battery_perc_vals.append(BatteryPercentage)
 
-        if len(battery_vals) == 20:
-            battery_vals.append(BatteryPercentage)
-            battery_vals = battery_vals[1:]
-            avg_bat = sum(battery_vals) / 20
+        if len(battery_perc_vals) == 20:
+            battery_perc_vals = battery_perc_vals[1:]
+            avg_bat = sum(battery_perc_vals) / 20
             print(f"Current battery level: {avg_bat:.2f} %")
 
         time.sleep(0.5)
