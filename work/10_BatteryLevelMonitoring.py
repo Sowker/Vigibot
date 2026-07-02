@@ -24,6 +24,8 @@ cmd = 0x84
 channel = 0
 control_byte = cmd | (((channel << 2 | channel >> 1) & 0x07) << 4)
 
+NB_VAL_AVG = 40
+
 if __name__ == "__main__":
     buffer = [1]
     battery_perc_vals = []
@@ -36,9 +38,9 @@ if __name__ == "__main__":
         BatteryPercentage = (ActualBatteryVoltage - WarningThreshold) / (Vref - WarningThreshold) * 100
         battery_perc_vals.append(BatteryPercentage)
 
-        if len(battery_perc_vals) == 20:
+        if len(battery_perc_vals) == NB_VAL_AVG:
             battery_perc_vals = battery_perc_vals[1:]
-            avg_bat = sum(battery_perc_vals) / 20
+            avg_bat = sum(battery_perc_vals) / NB_VAL_AVG
             print(f"Current battery level: {avg_bat:.2f} %")
 
         time.sleep(0.5)

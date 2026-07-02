@@ -234,8 +234,7 @@ def thread_object_controller(robot: Robot, interval: float) -> None:
         robot.head.set_angle_motor(0, WHEEL_ANGLE_CENTER)
         print("1/ratio_angle ", str(1 / ratio_angle))
         print("2/ratio_distance ", str(2 / ratio_distance))
-        backward_sleep_time = max(0, ((1 - ratio_angle) + (
-                    2 - ratio_distance * 2)))  # between 0 and 1 seconds, inversly proportional to the distance and to the angle
+        backward_sleep_time = max(0, ((1 - ratio_angle) + (2 - ratio_distance * 2))/2)  # between 0 and 1 seconds, inversly proportional to the distance and to the angle
         time.sleep(backward_sleep_time)
         print("backward_sleep_time ", backward_sleep_time)
         # time.sleep(0.1 * (1 / (distance_cm/10) ) ) # adjust how much we go backward depending on the distance to the obstacle
