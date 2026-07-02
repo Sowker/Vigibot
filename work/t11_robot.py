@@ -60,7 +60,6 @@ class Robot:
         self._pca.frequency = PCA_FREQUENCY_HZ
 
         self.ultrasonic   = UltrasonicSensor(cfg.us_trigger, cfg.us_echo)
-        self.line_tracker = LineTracker(cfg.line_left, cfg.line_mid, cfg.line_right)
         self.line_avoider = CircleTracker(cfg.line_left, cfg.line_mid, cfg.line_right)
         self.motor        = DCMotor(self._pca)
         self.head         = Head(self._pca)
