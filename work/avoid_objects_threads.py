@@ -25,6 +25,12 @@ SENSOR_INTERVAL_S     = 0.05   # s — période des threads capteurs
 #  THREADS
 # ═══════════════════════════════════════════════════════════════════
 
+
+MODE_AVOID_LINE = True
+MODE_AVOID_OBJ = False
+MODE = MODE_AVOID_OBJ
+
+# CONSTANTS AND VARIABLES FOR AVOID OBJECTS
 scan = []
 
 SCAN_ANGLE = 65
@@ -43,9 +49,8 @@ BYPASS_SPEED = SPEED_NORMAL_PCT * 0.8
 SCAN_STEP = 10
 SCAN_WAIT_TIME = 0.2
 
-MODE_AVOID_LINE = True
-MODE_AVOID_OBJ = False
-MODE = MODE_AVOID_OBJ
+# CONSTANTS AND VARIABLES FOR AVOID LINES
+AVOID_LINE_SPEED = 20
 
 
 def thread_ultrasonic_scanning(robot: Robot, interval: float) -> None:
@@ -171,37 +176,37 @@ def thread_avoid_line_controller(robot: Robot, interval: float) -> None:
         if robot.state.line_action == CirclePosition.TURN_RIGHT_SOFT:
             # Approche depuis la droite -> tourner doucement à gauche
             robot.head.steer_left(15)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
             log.info("Capteur droit actif -> virage doux gauche")
 
         elif robot.state.line_action == CirclePosition.TURN_RIGHT_HARD:
             # Trop à droite -> tourner fort à gauche
             robot.head.steer_left(35)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
             log.info("Capteur droit+milieu actifs -> virage fort gauche")
 
         elif robot.state.line_action == CirclePosition.TURN_LEFT_SOFT:
             # Approche depuis la gauche -> tourner doucement à droite
             robot.head.steer_right(15)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
             log.info("Capteur gauche actif -> virage doux droite")
 
         elif robot.state.line_action == CirclePosition.TURN_LEFT_HARD:
             # Trop à gauche -> tourner fort à droite
             robot.head.steer_right(35)
-            robot.motor.drive(Direction.FORWARD, SPEED_TURNING_PCT, fast_accel=True)
+            robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
             log.info("Capteur gauche+milieu actifs -> virage fort droite")
 
         elif robot.state.line_action ==  CirclePosition.STRAIGHT:
             # Ligne centrée -> tout droit
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+            robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
             log.info("Capteur milieu actif -> tout droit")
 
         else:
             # Aucun capteur -> avancer doucement ou chercher
             robot.head.steer_center()
-            robot.motor.drive(Direction.FORWARD, SPEED_NORMAL_PCT, fast_accel=True)
+            robot.motor.drive(Direction.FORWARD, AVOID_LINE_SPEED, fast_accel=True)
             log.info("Aucun capteur actif -> avancer (centre)")
 
         time.sleep(interval)
